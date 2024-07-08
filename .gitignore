@@ -1,3 +1,12 @@
+# All dot directories in the root
+/.*/
+
+# CMake User Presets
+CMakeUserPresets.json
+
+# CMake build directories
+/*build*
+
 # Prerequisites
 *.d
 
