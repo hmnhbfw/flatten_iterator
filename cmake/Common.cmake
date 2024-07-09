@@ -346,6 +346,18 @@ function(xor lhs rhs)
   endif()
 endfunction()
 
+# Use the `n_physical_cores` variable to get the number of physical processor
+# cores after calling this macro
+macro(get_n_physical_cores)
+  cmake_host_system_information(RESULT n_physical_cores QUERY NUMBER_OF_PHYSICAL_CORES)
+endmacro()
+
+# Use the `n_logical_cores` variable to get the number of logical processor
+# cores after calling this macro
+macro(get_n_logical_cores)
+  cmake_host_system_information(RESULT n_logical_cores QUERY NUMBER_OF_LOGICAL_CORES)
+endmacro()
+
 
 #################### `print` macros for debugging purposes #####################
 
