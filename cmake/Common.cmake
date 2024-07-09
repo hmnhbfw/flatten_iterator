@@ -164,7 +164,7 @@ endfunction()
 
 #[=============================================================================[
   Include the `${module}.cmake` file located in the `cmake` directory of
-  the current project. It let us include cmake-files by name, preventing
+  the current project. It let us include listfiles by name, preventing
   name collisions by using `include(${module})` when a module with
   the same name is defined in the outer score, e.g. the outer project
   sets its own `CMAKE_MODULE_PATH`.
@@ -173,7 +173,7 @@ macro(include_project_module module)
   include("${PROJECT_SOURCE_DIR}/cmake/${module}.cmake")
 endmacro()
 
-# Enable the rest of a listfile if the project variable is set
+# Enable the rest of a listfile if the project cached variable is set
 macro(enable_if_project_variable_is_set SUFFIX)
   if (NOT ${NAMESPACE_UPPER}_${SUFFIX})
     return()
