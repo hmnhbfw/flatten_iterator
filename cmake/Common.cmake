@@ -250,23 +250,25 @@ function(project_cached_variable variable_alias value type docstring)
   set(${variable_alias} ${${NAMESPACE_UPPER}_${variable_alias}} PARENT_SCOPE)
 endfunction()
 
-# Add a project library target called `${namespace_lower}_${target_alias}`.
+# Add a project library target called by `${namespace_lower}_${target_alias}`.
 # All parameters of the `add_library` command are passed after `target_alias`.
-macro(add_project_library target_alias)
+function(add_project_library target_alias)
   set(${target_alias} ${namespace_lower}_${target_alias})
   add_library(${${target_alias}} ${ARGN})
   add_library(${namespace_lower}::${target_alias} ALIAS ${${target_alias}})
   set_target_properties(${${target_alias}} PROPERTIES EXPORT_NAME ${target_alias})
-endmacro()
+  set(${target_alias} ${${target_alias}} PARENT_SCOPE)
+endfunction()
 
-# Add an executable target called `${namespace_lower}_${target_alias}`.
+# Add an executable target called by `${namespace_lower}_${target_alias}`.
 # All parameters of the `add_executable` command are passed after `target_alias`.
-macro(add_project_executable target_alias)
+function(add_project_executable target_alias)
   set(${target_alias} ${namespace_lower}_${target_alias})
   add_executable(${${target_alias}} ${ARGN})
   add_executable(${namespace_lower}::${target_alias} ALIAS ${${target_alias}})
   set_target_properties(${${target_alias}} PROPERTIES EXPORT_NAME ${target_alias})
-endmacro()
+  set(${target_alias} ${${target_alias}} PARENT_SCOPE)
+endfunction()
 
 macro(get_project_target_property variable target project_property)
   get_target_property("${variable}" ${target} ${NAMESPACE_UPPER}_${project_property})
