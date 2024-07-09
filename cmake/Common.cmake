@@ -1,3 +1,21 @@
+#[=============================================================================[
+  Author: Pavel Tsayukov
+  Distributed under the MIT License. See accompanying file LICENSE or
+  https://opensource.org/license/mit for details.
+  ------------------------------------------------------------------------------
+  Include common variables, macros, and functions.
+  ------------------------------------------------------------------------------
+  Usage:
+
+    # CMakeLists.txt
+    cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
+    project(my_project_name)
+
+    include("${PROJECT_SOURCE_DIR}/cmake/Common.cmake")
+    no_in_source_builds_guard()
+
+#]=============================================================================]
+
 include_guard(GLOBAL)
 
 
@@ -10,6 +28,12 @@ include_guard(GLOBAL)
 macro(init_common)
   # This guard should be at the beginning
   after_project_guard()
+
+  if(CMAKE_VERSION LESS "3.14")
+    message(FATAL_ERROR
+      "Requires a CMake version not lower than 3.14, but got ${CMAKE_VERSION}."
+    )
+  endif()
 
   #[===========================================================================[
     The `PROJECT_IS_TOP_LEVEL` is set by the `project` command in CMake 3.21+.
