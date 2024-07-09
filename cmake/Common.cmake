@@ -19,10 +19,11 @@
       - add_project_executable
       - get_project_target_property
       - set_project_target_property
-    * Miscellaneous
-      - xor
+    * Host information
       - get_n_physical_cores
       - get_n_logical_cores
+    * Miscellaneous
+      - xor
     * Debugging
       - print
       - print_var
@@ -359,16 +360,7 @@ function(add_project_header_only_library target_alias)
 endfunction()
 
 
-################################ Miscellaneous #################################
-
-# Exclusive OR. Use the `xor_result` variable to get the result.
-function(xor lhs rhs)
-  if (((NOT "${lhs}") AND "${rhs}") OR ("${lhs}" AND (NOT "${rhs}")))
-    set(xor_result ON PARENT_SCOPE)
-  else()
-    set(xor_result OFF PARENT_SCOPE)
-  endif()
-endfunction()
+############################### Host information ###############################
 
 # Use the `n_physical_cores` variable to get the number of physical processor
 # cores after calling this macro
@@ -381,6 +373,18 @@ endmacro()
 macro(get_n_logical_cores)
   cmake_host_system_information(RESULT n_logical_cores QUERY NUMBER_OF_LOGICAL_CORES)
 endmacro()
+
+
+################################ Miscellaneous #################################
+
+# Exclusive OR. Use the `xor_result` variable to get the result.
+function(xor lhs rhs)
+  if (((NOT "${lhs}") AND "${rhs}") OR ("${lhs}" AND (NOT "${rhs}")))
+    set(xor_result ON PARENT_SCOPE)
+  else()
+    set(xor_result OFF PARENT_SCOPE)
+  endif()
+endfunction()
 
 
 ################################## Debugging ###################################
