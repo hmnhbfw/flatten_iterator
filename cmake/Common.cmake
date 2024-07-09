@@ -99,45 +99,50 @@ macro(no_in_source_builds_guard)
 endmacro()
 
 
-##################### Project related functions and macros #####################
-# To prevent name clashes all project cached variables, targets, and properties
-# defined by functions and macros below have a prefix followed by underscore,
-# that is defined by the `define_project_namespace([<prefix>])` command.
-# It is recommended to name cached variables and properties in uppercase letters
-# with underscores. On the contrary, it is recommended to name targets in
-# lowercase letters with underscore. The prefix, aka namespace, format is
-# selected accordingly, in uppercase or lowercase letters with underscores.
-# In addition, it is defined a normal variable for each project cached variable
-# and target. For project cached variables, these variables are set to the value
-# of the corresponding project cached variable. For project targets, these
-# variables are set to the true target name.
-#
-# E.g. the `project_option(ENABLE_FEATURE "Enable a cool feature" ON)` command
-# is trying to set an option, aka boolean cached variable, named
-# `${NAMESPACE_UPPER}_ENABLE_FEATURE`. A short alias named `ENABLE_FEATURE` is
-# also defined and set to `ON`.
-#
-# E.g. the `add_project_library(my_library INTERFACE)` command defines
-# an interface library named `${namespace_lower}_my_library`. A short alias
-# named `my_library` is also defined and set to the true target name.
-# Typical usage: `target_compile_features(${my_library} INTERFACE cxx_std_20)`.
-#
-# The `EXPORT_NAME` property is also added to the target and set to `my_library`.
-# It is nessecary in order to use the `install(TARGETS ${my_library} ...)` and then
-# `install(EXPORT ... NAMESCAPE ${namespace_lower}::)` to export the target as
-# `${namespace_lower}::my_library`.
-#
-# An alias target named `${namespace_lower}::my_library` is also defined.
-# When a consuming project gets this project via the `find_package` command
-# it uses exported targets, e.g. `${namespace_lower}::my_library`, that defined
-# by the `install(EXPORT ... NAMESPACE ${namespace_lower}::)`. But if a consuming
-# project gets this project via the `FetchContent` module or `add_subdirectory`
-# command it has to use `my_library` until this project adds an alias defenition
-# via the `add_library(${namespace_lower}::my_library ALIAS ${my_library})`
-# command. Summing up, changing the method of getting this project won't cause
-# to change `target_link_libraries(<consuming_target> ... <namespace>::<target>)`
-# usage in any of these cases.
-################################################################################
+#[=============================================================================[
+                      Project related functions and macros
+
+  To prevent name clashes all project cached variables, targets, and properties
+  defined by functions and macros below have a prefix followed by underscore.
+  This prefix is defined by the `define_project_namespace([<prefix>])` command.
+  It is recommended to name cached variables and properties in uppercase letters
+  with underscores. On the contrary, it is recommended to name targets in
+  lowercase letters with underscore. The prefix, aka namespace, format is
+  selected accordingly, in uppercase or lowercase letters with underscores.
+  In addition, normal variables are defined for all project cached variables
+  and targets. For project cached variables, these variables are set to the
+  value of the corresponding project cached variable. For project targets, these
+  variables are set to the true target name.
+
+  E.g. the `project_option(ENABLE_FEATURE "Enable a cool feature" ON)` command
+  is trying to set an option, aka boolean cached variable, named by
+  `${NAMESPACE_UPPER}_ENABLE_FEATURE`. A short alias named by `ENABLE_FEATURE`
+  is also defined and set to `ON`.
+
+  E.g. the `add_project_library(my_library INTERFACE)` command defines
+  an interface library named by `${namespace_lower}_my_library`. A short alias
+  named by `my_library` is also defined and set to the true target name.
+  Typical usage: `target_compile_features(${my_library} INTERFACE cxx_std_20)`.
+
+  The `EXPORT_NAME` property is also added to the target and set to `my_library`.
+  It is nessecary in order to use the `install(TARGETS ${my_library} ...)` and
+  then `install(EXPORT ... NAMESCAPE ${namespace_lower}::)` to export the target
+  as `${namespace_lower}::my_library`.
+
+  An alias target named by `${namespace_lower}::my_library` is also defined.
+  When a consuming project gets this project via the `find_package` command
+  it uses exported targets, e.g. `${namespace_lower}::my_library`, that defined
+  by `install(EXPORT ... NAMESPACE ${namespace_lower}::)`.
+  But if a consuming project gets this project via the `FetchContent` module or
+  `add_subdirectory` command it has to use `${my_library}` until this project
+  adds an alias defenition:
+
+    add_library(${namespace_lower}::my_library ALIAS ${my_library})
+
+  Summing up, changing the method of getting this project won't cause
+  to change `target_link_libraries(<consuming_target> ... <namespace>::<target>)`
+  usage in any of these cases.
+#]=============================================================================]
 
 # Define the namespace, by default it is `${PROJECT_NAME}` in the appropriate
 # format
