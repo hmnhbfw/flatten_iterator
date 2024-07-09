@@ -64,13 +64,13 @@ endmacro()
 
 #################################### Guards ####################################
 
-# Prevent including any listfiles before the `project` command
+# For internal use: prevent including any listfiles before the `project` command
+# in the current project root listfile.
 function(after_project_guard)
-  if (NOT (PROJECT_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR))
+  if (NOT PROJECT_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     get_filename_component(file_name "${CMAKE_CURRENT_LIST_FILE}" NAME)
     message(FATAL_ERROR
-      "\n"
-      "'${file_name}' must be included in the current listfile after the `project` command.\n"
+      "'${file_name}' must be included in the current listfile after the `project` command."
     )
   endif()
 endfunction()
