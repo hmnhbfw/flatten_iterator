@@ -350,15 +350,15 @@ endfunction()
 #################### `print` macros for debugging purposes #####################
 
 macro(print text)
-  message(STATUS "--> ${text}")
+  message("${text}")
 endmacro()
 
 macro(print_var variable)
-  message(STATUS "--> ${variable} = \"${${variable}}\"")
+  message("${variable} = \"${${variable}}\"")
 endmacro()
 
 macro(print_var_with variable hint)
-  message(STATUS "--> ${hint}: ${variable} = \"${${variable}}\"")
+  message("${hint}: ${variable} = \"${${variable}}\"")
 endmacro()
 
 
