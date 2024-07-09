@@ -188,26 +188,17 @@ endmacro()
   Use the short alias `${ALIAS}` to get the option's value where `ALIAS` is
   `${variable_alias}`.
 
-    project_option(<variable_alias> "<help_text>" <value>
-      [[WEAK] [IF <condition>] [AUTHOR_WARNING "<warning_text>"...]]
-    )
+    project_option(<variable_alias> "<help_text>" <value> [IF <condition>])
 
   The `condition` parameter after the `IF` keyword is a condition that is used
   inside the `if (<condition>)` command. If it is true, the project option will
   try to set to `${value}`, otherwise, to the opposite one.
-  If the project option is already set, and its value is not what it would be
-  after checking the `condition`, then, if `AUTHOR_WARNING` is set, a warning
-  with the corresponding message will raise.
-  If the `WEAK` option is set, then the `condition` is weak, that is, it doesn't
-  control setting the project option's value, but if the `condition` is true
-  and the project option is set to the opposite value of `${value}`, then, if
-  `AUTHOR_WARNING` is set, a warning with the corresponding message will raise.
 #]=============================================================================]
 function(project_option variable_alias help_text value)
-  set(options WEAK)
+  set(options "")
   set(one_value_keywords "")
-  set(multi_value_keywords IF AUTHOR_WARNING)
-  cmake_parse_arguments(PARSE_ARGV 3 "args"
+  set(multi_value_keywords IF)
+  cmake_parse_arguments(PARSE_ARGV 3 "ARGS"
     "${options}"
     "${one_value_keywords}"
     "${multi_value_keywords}"
@@ -221,28 +212,11 @@ function(project_option variable_alias help_text value)
     set(not_value ON)
   endif()
 
-  if (DEFINED args_IF)
-    list(JOIN args_AUTHOR_WARNING "" args_AUTHOR_WARNING)
-    if (args_WEAK)
+  if (DEFINED ARGS_IF)
+    if (${ARGS_IF})
       option(${variable} "${help_text}" ${value})
-      if(${args_IF})
-        xor(${${variable}} ${value})
-        if (xor_result AND args_AUTHOR_WARNING)
-          message(AUTHOR_WARNING "${args_AUTHOR_WARNING}")
-        endif()
-      endif()
-    elseif (${args_IF})
-      option(${variable} "${help_text}" ${value})
-      xor(${${variable}} ${value})
-      if (xor_result AND args_AUTHOR_WARNING)
-        message(AUTHOR_WARNING "${args_AUTHOR_WARNING}")
-      endif()
     else()
       option(${variable} "${help_text}" ${not_value})
-      xor(${${variable}} ${not_value})
-      if (xor_result AND args_AUTHOR_WARNING)
-        message(AUTHOR_WARNING "${args_AUTHOR_WARNING}")
-      endif()
     endif()
   else()
     option(${variable} "${help_text}" ${value})
@@ -252,7 +226,7 @@ function(project_option variable_alias help_text value)
 endfunction()
 
 #[=============================================================================[
-  Set a project option named `${NAMESPACE_UPPER}_${variable_alias}` to `ON`
+  Set a project option named by `${NAMESPACE_UPPER}_${variable_alias}` to `ON`
   if the developer mode is enable, e.g. by passing
   `-D${NAMESPACE_UPPER}_ENABLE_DEVELOPER_MODE=ON`.
   Note, if this project option is already set, this macro has no effect.
@@ -264,17 +238,17 @@ macro(project_dev_option variable_alias help_text)
 endmacro()
 
 #[=============================================================================[
-  Set a project cached variable named `${NAMESPACE_UPPER}_${variable_alias}`
+  Set a project cached variable named by `${NAMESPACE_UPPER}_${variable_alias}`
   if there is no such cached variable set before (see CMP0126 for details).
   Use the short alias `${ALIAS}` to get the cached variable's value where
   `ALIAS` is `${variable_alias}`.
 #]=============================================================================]
-macro(project_cached_variable variable_alias value type docstring)
+function(project_cached_variable variable_alias value type docstring)
   set(${NAMESPACE_UPPER}_${variable_alias} ${value} CACHE ${type}
     "${docstring}" ${ARGN}
   )
-  set(${variable_alias} ${${NAMESPACE_UPPER}_${variable_alias}})
-endmacro()
+  set(${variable_alias} ${${NAMESPACE_UPPER}_${variable_alias}} PARENT_SCOPE)
+endfunction()
 
 # Add a project library target called `${namespace_lower}_${target_alias}`.
 # All parameters of the `add_library` command are passed after `target_alias`.
