@@ -3,8 +3,32 @@
   Distributed under the MIT License. See accompanying file LICENSE or
   https://opensource.org/license/mit for details.
   ------------------------------------------------------------------------------
-  Include common variables, macros, and functions.
+  Include common variables and commands.
   ------------------------------------------------------------------------------
+  Commands:
+    * Guards:
+      - no_in_source_builds_guard
+    * Project related commands:
+      - define_project_namespace
+      - include_project_module
+      - enable_if_project_variable_is_set
+      - project_option
+      - project_dev_option
+      - project_cached_variable
+      - add_project_library
+      - add_project_executable
+      - get_project_target_property
+      - set_project_target_property
+    * Miscellaneous
+      - xor
+      - get_n_physical_cores
+      - get_n_logical_cores
+    * Debugging
+      - print
+      - print_var
+      - print_var_with
+    * TODO: add other modules
+
   Usage:
 
     # CMakeLists.txt
@@ -100,7 +124,7 @@ endfunction()
 
 
 #[=============================================================================[
-                      Project related functions and macros
+                            Project related commands
 
   To prevent name clashes all project cached variables, targets, and properties
   defined by functions and macros below have a prefix followed by underscore.
@@ -359,7 +383,7 @@ macro(get_n_logical_cores)
 endmacro()
 
 
-#################### `print` macros for debugging purposes #####################
+################################## Debugging ###################################
 
 macro(print text)
   message("${text}")
