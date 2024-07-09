@@ -337,14 +337,14 @@ endfunction()
 
 ################################ Miscellaneous #################################
 
-# Exclusive OR
-macro(xor lhs rhs)
+# Exclusive OR. Use the `xor_result` variable to get the result.
+function(xor lhs rhs)
   if (((NOT "${lhs}") AND "${rhs}") OR ("${lhs}" AND (NOT "${rhs}")))
-    set(xor_result ON)
+    set(xor_result ON PARENT_SCOPE)
   else()
-    set(xor_result OFF)
+    set(xor_result OFF PARENT_SCOPE)
   endif()
-endmacro()
+endfunction()
 
 
 #################### `print` macros for debugging purposes #####################
