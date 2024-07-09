@@ -145,7 +145,7 @@ endfunction()
 #]=============================================================================]
 
 # Define the namespace, by default it is `${PROJECT_NAME}` in the appropriate
-# format
+# format, see `NAMESPACE_UPPER` and `namespace_lower` variables.
 function(define_project_namespace)
   if (ARGC EQUAL "0")
     set(namespace ${PROJECT_NAME})
