@@ -3,9 +3,9 @@ after_project_guard()
 
 
 if (MSVC)
-  include_project_module(cxx_compiler/Msvc.Options)
+  include_project_module(compiler/Msvc.CxxOptions)
 else()
-  include_project_module(cxx_compiler/Gnu.Options)
+  include_project_module(compiler/Gnu.CxxOptions)
 endif()
 
 add_project_library(cxx_warning_options INTERFACE)

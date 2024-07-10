@@ -80,7 +80,7 @@ macro(__init_common)
   include_project_module(Variables)
 
   # Include other Commons after Variables
-  include_project_module(cxx_compiler/Common)
+  include_project_module(compiler/Common)
   include_project_module(dependencies/Common)
   include_project_module(install/Common)
   include_project_module(modules/Common)
