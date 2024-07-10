@@ -35,7 +35,7 @@
 
   Usage:
 
-    # CMakeLists.txt
+  # File: CMakeLists.txt
     cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
     project(my_project_name)
 
@@ -48,12 +48,12 @@ include_guard(GLOBAL)
 
 
 #[=============================================================================[
-  This macro must be called at the end of the current listfile.
+  For internal use: this macro must be called at the end of the current listfile.
   It checks if the `project` command is already called, prevents in-source
   builds inside the 'cmake' directory, and initialize some common variables,
   project options, and project cached variables.
 #]=============================================================================]
-macro(init_common)
+macro(__init_common)
   # This guard should be at the beginning
   after_project_guard()
 
@@ -449,4 +449,4 @@ endmacro()
 
 ########################### The end of the listfile ############################
 
-init_common()
+__init_common()
