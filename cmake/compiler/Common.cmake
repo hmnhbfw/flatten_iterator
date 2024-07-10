@@ -150,7 +150,7 @@ macro(__include_compiler_commands lang LANG)
           set(lhs ${lhs}00)
         endif()
         if (NOT rhs MATCHES "^9[0-9]$")
-          set(rhs ${lhs}00)
+          set(rhs ${rhs}00)
         endif()
 
         if (lhs LESS rhs)
@@ -172,13 +172,16 @@ macro(__include_compiler_commands lang LANG)
       __compare_standards(${current_standard} ${standard})
       if (__compare_standards_result STREQUAL "LESS")
         message(FATAL_ERROR
-          "The library requires the ${LANG} standard ${current_standard}. Got: ${standard}."
+          "The library requires the ${LANG} standard ${current_standard}, but got: ${standard}."
         )
       endif()
 
-      if (NOT TARGET ${${lang}_standard})
-        add_project_library(${lang}_standard INTERFACE)
-        target_compile_features(${${lang}_standard}
+      set(target_alias ${lang}_standard)
+      if (NOT TARGET ${${target_alias}})
+        add_project_library(${target_alias} INTERFACE)
+        set(target ${${target_alias}})
+        set(${target_alias} ${target} PARENT_SCOPE)
+        target_compile_features(${target}
           INTERFACE
             ${lang}_std_${current_standard}
         )
@@ -193,7 +196,7 @@ macro(__include_compiler_commands lang LANG)
       if (NOT TARGET ${${lang}_standard})
         message(FATAL_ERROR
           "\n"
-          "The `${${lang}_standard}` target must be defined.\n"
+          "The `${namespace_lower}_${lang}_standard` target must be defined.\n"
           "Hint: call the `use_${lang}_standard_at_least(<standard>)` command in the root listfile of the current library before this code has been processed.\n"
         )
       endif()
