@@ -1,18 +1,28 @@
-include_guard(GLOBAL)
-after_project_guard()
-
-
 #[=============================================================================[
-  Set `CMAKE_${language}_COMPILER_LAUNCHER` if `ccache` is enabled and found.
+  Author: Pavel Tsayukov
+  Distributed under the MIT License. See accompanying file LICENSE or
+  https://opensource.org/license/mit for details.
+  ------------------------------------------------------------------------------
+  Ccache support for fast recompilation.
+  ------------------------------------------------------------------------------
+  Enable the `${NAMESPACE_UPPER}_ENABLE_CCACHE` project option to turn ccache on.
+  See `Variables.cmake` for details.
+
   See supported languages:
     - https://ccache.dev/
     - https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER_LAUNCHER.html
 #]=============================================================================]
-function(use_ccache_if_enabled_for language)
+
+include_guard(GLOBAL)
+after_project_guard()
+
+
+# Set `CMAKE_${LANG}_COMPILER_LAUNCHER` if `ccache` is enabled and found.
+function(use_ccache_if_enabled_for LANG)
   enable_if_project_variable_is_set(ENABLE_CCACHE)
   if (CCACHE_PATH)
-    set(CMAKE_${language}_COMPILER_LAUNCHER
-      "${CCACHE_PATH}" CACHE FILEPATH "${language} compiler launcher"
+    set(CMAKE_${LANG}_COMPILER_LAUNCHER
+      "${CCACHE_PATH}" CACHE FILEPATH "${LANG} compiler launcher"
     )
   endif()
 endfunction()
@@ -20,10 +30,7 @@ endfunction()
 
 enable_if_project_variable_is_set(ENABLE_CCACHE)
 
-if (NOT CCACHE_PATH)
-  find_program(CCACHE_PATH ccache)
-endif()
-
+find_program(CCACHE_PATH ccache)
 if (NOT CCACHE_PATH)
   message(AUTHOR_WARNING
     "\n"

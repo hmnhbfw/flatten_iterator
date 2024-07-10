@@ -218,9 +218,12 @@ endmacro()
 
 
 macro(__include_compiler_options lang LANG)
+  include_project_module(dependencies/Ccache)
+
   # So far, support only C++ options
   if ("${LANG}" STREQUAL "CXX")
     include_project_module(compiler/CxxOptions)
+    use_ccache_if_enabled_for(CXX)
   endif()
 
   # TODO: add C options support
