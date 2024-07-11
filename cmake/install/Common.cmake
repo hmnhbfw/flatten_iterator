@@ -182,7 +182,7 @@ function(install_header_only_library)
 
   install(EXPORT
       "${export_target_name}"
-    NAMESPACE ${namespace_lower}::
+    NAMESPACE ${namespace}::
     DESTINATION "${INSTALL_CMAKE_DIR}"
     COMPONENT "configs"
   )

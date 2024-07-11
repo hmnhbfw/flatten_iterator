@@ -9,8 +9,8 @@
   specify a particular version of GTest in the `find_package(GTest <version>)`
   command and use other GIT_TAG in the `FetchContent_Declare()` command.
 
-  Enable the `${NAMESPACE_UPPER}_ENABLE_DEVELOPER_MODE` or
-  `${NAMESPACE_UPPER}_ENABLE_TESTING` project option to turn testing on.
+  Enable the `${NAMESPACE}_ENABLE_DEVELOPER_MODE` or
+  `${NAMESPACE}_ENABLE_TESTING` project option to turn testing on.
   See `../Variables.cmake` for details.
 #]=============================================================================]
 

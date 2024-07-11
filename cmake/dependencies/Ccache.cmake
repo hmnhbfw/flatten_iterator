@@ -5,7 +5,7 @@
   ------------------------------------------------------------------------------
   Ccache support for fast recompilation.
   ------------------------------------------------------------------------------
-  Enable the `${NAMESPACE_UPPER}_ENABLE_CCACHE` project option to turn ccache on.
+  Enable the `${NAMESPACE}_ENABLE_CCACHE` project option to turn ccache on.
   See `../Variables.cmake` for details.
 
   See supported languages:

@@ -10,9 +10,9 @@
   `find_package(benchmark <version>)` command and use other GIT_TAG in the
   `FetchContent_Declare()` command.
 
-  Enable the `${NAMESPACE_UPPER}_ENABLE_DEVELOPER_MODE` or
-  `${NAMESPACE_UPPER}_ENABLE_BENCHMARKING` project option to turn benchmarking
-  on. See `../Variables.cmake` for details.
+  Enable the `${NAMESPACE}_ENABLE_DEVELOPER_MODE` or
+  `${NAMESPACE}_ENABLE_BENCHMARKING` project option to turn benchmarking on.
+  See `../Variables.cmake` for details.
 #]=============================================================================]
 
 include_guard(GLOBAL)

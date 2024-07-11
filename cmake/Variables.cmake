@@ -20,7 +20,7 @@ define_project_namespace()
   Allow to install all external dependencies locally (e.g. using `FetchContent`,
   or `ExternalProject` and downloading external sources into the binary
   directory), except to those that is not allowed explicitly by setting
-  `${NAMESPACE_UPPER}_INSTALL_<dependency-name>_LOCALLY`.
+  `${NAMESPACE}_INSTALL_<dependency-name>_LOCALLY`.
   `<dependency-name>` is just a name using by the `find_package` command.
 #]=============================================================================]
 project_option(INSTALL_EXTERNALS_LOCALLY "Install external dependencies locally" OFF)
@@ -77,7 +77,7 @@ if (ENABLE_INSTALL)
   include(GNUInstallDirs)
 
   project_cached_variable(PACKAGE_NAME
-    ${namespace_lower} STRING
+    ${namespace} STRING
     "The package name used by the `find_package` command"
   )
 

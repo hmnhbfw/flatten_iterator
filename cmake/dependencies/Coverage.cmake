@@ -5,8 +5,8 @@
   ------------------------------------------------------------------------------
   Code coverage
   ------------------------------------------------------------------------------
-  Enable the `${NAMESPACE_UPPER}_ENABLE_DEVELOPER_MODE` or
-  `${NAMESPACE_UPPER}_ENABLE_COVERAGE` project option to turn code coverage on.
+  Enable the `${NAMESPACE}_ENABLE_DEVELOPER_MODE` or
+  `${NAMESPACE}_ENABLE_COVERAGE` project option to turn code coverage on.
   See `../Variables.cmake` for details.
 #]=============================================================================]
 

@@ -5,7 +5,7 @@
   ------------------------------------------------------------------------------
   Documentation generation
   ------------------------------------------------------------------------------
-  Enable the `${NAMESPACE_UPPER}_ENABLE_DOCS` project option to turn
+  Enable the `${NAMESPACE}_ENABLE_DOCS` project option to turn
   documentation generation on. See `../Variables.cmake` for details.
 #]=============================================================================]
 
@@ -22,7 +22,7 @@ include_guard(GLOBAL)
                         INPUTS <files or directories> ...
                         [OUTPUT <output_directory>])
 
-  The true target name is `${namespace_lower}_${target_alias}` with defined
+  The true target name is `${namespace}_${target_alias}` with defined
   `${target_alias}` variable set to the target name.
 
   See supported formats: https://www.doxygen.nl/manual/starting.html#step2.
@@ -58,7 +58,7 @@ function(add_docs_if_enabled target_alias)
   set(DOXYGEN_GENERATE_${args_FORMAT} YES)
   set(DOXYGEN_${args_FORMAT}_OUTPUT "${output}")
 
-  set(target ${namespace_lower}_${target_alias})
+  set(target ${namespace}_${target_alias})
   doxygen_add_docs(
     ${target} ${args_INPUTS}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"

@@ -210,7 +210,7 @@ macro(__include_compiler_commands lang LANG)
       if (NOT TARGET ${${lang}_standard})
         message(FATAL_ERROR
           "\n"
-          "The `${namespace_lower}_${lang}_standard` target must be defined.\n"
+          "The `${namespace}_${lang}_standard` target must be defined.\n"
           "Hint: call the `use_${lang}_standard_at_least(<standard>)` command in the root listfile of the current library before this code has been processed.\n"
         )
       endif()

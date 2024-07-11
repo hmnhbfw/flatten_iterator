@@ -5,8 +5,8 @@
   ------------------------------------------------------------------------------
   Formatting
   ------------------------------------------------------------------------------
-  Enable the `${NAMESPACE_UPPER}_ENABLE_DEVELOPER_MODE` or
-  `${NAMESPACE_UPPER}_ENABLE_FORMATTING` project option to turn formatting on.
+  Enable the `${NAMESPACE}_ENABLE_DEVELOPER_MODE` or
+  `${NAMESPACE}_ENABLE_FORMATTING` project option to turn formatting on.
   See `../Variables.cmake` for details.
 #]=============================================================================]
 

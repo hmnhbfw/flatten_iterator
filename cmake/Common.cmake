@@ -195,28 +195,28 @@ endmacro()
 
   E.g. the `project_option(ENABLE_FEATURE "Enable a cool feature" ON)` command
   is trying to set an option, aka boolean cached variable, named by
-  `${NAMESPACE_UPPER}_ENABLE_FEATURE`. A short alias named by `ENABLE_FEATURE`
+  `${NAMESPACE}_ENABLE_FEATURE`. A short alias named by `ENABLE_FEATURE`
   is also defined and set to `ON`.
 
   E.g. the `add_project_library(my_library INTERFACE)` command defines
-  an interface library named by `${namespace_lower}_my_library`. A short alias
-  named by `my_library` is also defined and set to the true target name.
+  an interface library named by `${namespace}_my_library`. A short alias named
+  by `my_library` is also defined and set to the true target name.
   Typical usage: `target_compile_features(${my_library} INTERFACE cxx_std_20)`.
 
   The `EXPORT_NAME` property is also added to the target and set to `my_library`.
   It is nessecary in order to use the `install(TARGETS ${my_library} ...)` and
-  then `install(EXPORT ... NAMESCAPE ${namespace_lower}::)` to export the target
-  as `${namespace_lower}::my_library`.
+  then `install(EXPORT ... NAMESCAPE ${namespace}::)` to export the target
+  as `${namespace}::my_library`.
 
-  An alias target named by `${namespace_lower}::my_library` is also defined.
+  An alias target named by `${namespace}::my_library` is also defined.
   When a consuming project gets this project via the `find_package` command
-  it uses exported targets, e.g. `${namespace_lower}::my_library`, that defined
-  by `install(EXPORT ... NAMESPACE ${namespace_lower}::)`.
+  it uses exported targets, e.g. `${namespace}::my_library`, that defined
+  by `install(EXPORT ... NAMESPACE ${namespace}::)`.
   But if a consuming project gets this project via the `FetchContent` module or
   `add_subdirectory` command it has to use `${my_library}` until this project
   adds an alias defenition:
 
-    add_library(${namespace_lower}::my_library ALIAS ${my_library})
+    add_library(${namespace}::my_library ALIAS ${my_library})
 
   Summing up, changing the method of getting this project won't cause
   to change `target_link_libraries(<consuming_target> ... <namespace>::<target>)`
@@ -224,7 +224,7 @@ endmacro()
 #]=============================================================================]
 
 # Define the namespace, by default it is `${PROJECT_NAME}` in the appropriate
-# format, see `NAMESPACE_UPPER` and `namespace_lower` variables.
+# format, see `NAMESPACE` and `namespace` variables.
 function(define_project_namespace)
   if (ARGC EQUAL "0")
     set(namespace ${PROJECT_NAME})
@@ -235,10 +235,10 @@ function(define_project_namespace)
   string(REGEX REPLACE "[- ]" "_" namespace ${namespace})
 
   string(TOUPPER ${namespace} namespace)
-  set(NAMESPACE_UPPER ${namespace} PARENT_SCOPE)
+  set(NAMESPACE ${namespace} PARENT_SCOPE)
 
   string(TOLOWER ${namespace} namespace)
-  set(namespace_lower ${namespace} PARENT_SCOPE)
+  set(namespace ${namespace} PARENT_SCOPE)
 endfunction()
 
 #[=============================================================================[
@@ -254,14 +254,14 @@ endmacro()
 
 # Enable the rest of a listfile if the project cached variable is set
 macro(enable_if_project_variable_is_set SUFFIX)
-  if (NOT ${NAMESPACE_UPPER}_${SUFFIX})
+  if (NOT ${NAMESPACE}_${SUFFIX})
     return()
   endif()
 endmacro()
 
 #[=============================================================================[
-  Set a project option named `${NAMESPACE_UPPER}_${variable_alias}` if there is
-  no such normal or cached variable set before (see CMP0077 for details). Other
+  Set a project option named `${NAMESPACE}_${variable_alias}` if there is no
+  such normal or cached variable set before (see CMP0077 for details). Other
   parameters of the `option` command are passed after the `variable_alias`
   parameter, except that the `value` parameter is required now.
   Use the short alias `${ALIAS}` to get the option's value where `ALIAS` is
@@ -283,7 +283,7 @@ function(project_option variable_alias help_text value)
     "${multi_value_keywords}"
   )
 
-  set(variable ${NAMESPACE_UPPER}_${variable_alias})
+  set(variable ${NAMESPACE}_${variable_alias})
 
   if (value)
     set(not_value OFF)
@@ -305,9 +305,9 @@ function(project_option variable_alias help_text value)
 endfunction()
 
 #[=============================================================================[
-  Set a project option named by `${NAMESPACE_UPPER}_${variable_alias}` to `ON`
+  Set a project option named by `${NAMESPACE}_${variable_alias}` to `ON`
   if the developer mode is enable, e.g. by passing
-  `-D${NAMESPACE_UPPER}_ENABLE_DEVELOPER_MODE=ON`.
+  `-D${NAMESPACE}_ENABLE_DEVELOPER_MODE=ON`.
   Note, if this project option is already set, this macro has no effect.
   Use the short alias `${ALIAS}` to get the option's value where `ALIAS`
   is `${variable_alias}`.
@@ -317,46 +317,46 @@ macro(project_dev_option variable_alias help_text)
 endmacro()
 
 #[=============================================================================[
-  Set a project cached variable named by `${NAMESPACE_UPPER}_${variable_alias}`
+  Set a project cached variable named by `${NAMESPACE}_${variable_alias}`
   if there is no such cached variable set before (see CMP0126 for details).
   Use the short alias `${ALIAS}` to get the cached variable's value where
   `ALIAS` is `${variable_alias}`.
 #]=============================================================================]
 function(project_cached_variable variable_alias value type docstring)
-  set(${NAMESPACE_UPPER}_${variable_alias} ${value} CACHE ${type}
+  set(${NAMESPACE}_${variable_alias} ${value} CACHE ${type}
     "${docstring}" ${ARGN}
   )
-  set(${variable_alias} ${${NAMESPACE_UPPER}_${variable_alias}} PARENT_SCOPE)
+  set(${variable_alias} ${${NAMESPACE}_${variable_alias}} PARENT_SCOPE)
 endfunction()
 
-# Add a project library target called by `${namespace_lower}_${target_alias}`.
+# Add a project library target called by `${namespace}_${target_alias}`.
 # All parameters of the `add_library` command are passed after `target_alias`.
 function(add_project_library target_alias)
-  set(${target_alias} ${namespace_lower}_${target_alias})
+  set(${target_alias} ${namespace}_${target_alias})
   add_library(${${target_alias}} ${ARGN})
-  add_library(${namespace_lower}::${target_alias} ALIAS ${${target_alias}})
+  add_library(${namespace}::${target_alias} ALIAS ${${target_alias}})
   set_target_properties(${${target_alias}} PROPERTIES EXPORT_NAME ${target_alias})
   set(${target_alias} ${${target_alias}} PARENT_SCOPE)
 endfunction()
 
-# Add an executable target called by `${namespace_lower}_${target_alias}`.
+# Add an executable target called by `${namespace}_${target_alias}`.
 # All parameters of the `add_executable` command are passed after `target_alias`.
 function(add_project_executable target_alias)
-  set(${target_alias} ${namespace_lower}_${target_alias})
+  set(${target_alias} ${namespace}_${target_alias})
   add_executable(${${target_alias}} ${ARGN})
-  add_executable(${namespace_lower}::${target_alias} ALIAS ${${target_alias}})
+  add_executable(${namespace}::${target_alias} ALIAS ${${target_alias}})
   set_target_properties(${${target_alias}} PROPERTIES EXPORT_NAME ${target_alias})
   set(${target_alias} ${${target_alias}} PARENT_SCOPE)
 endfunction()
 
 macro(get_project_target_property variable target project_property)
-  get_target_property("${variable}" ${target} ${NAMESPACE_UPPER}_${project_property})
+  get_target_property("${variable}" ${target} ${NAMESPACE}_${project_property})
 endmacro()
 
 macro(set_project_target_property target project_property value)
   set_target_properties(${target}
     PROPERTIES
-      ${NAMESPACE_UPPER}_${project_property} "${value}"
+      ${NAMESPACE}_${project_property} "${value}"
   )
 endmacro()
 
