@@ -5,10 +5,15 @@
   ------------------------------------------------------------------------------
   Include common variables and commands.
   ------------------------------------------------------------------------------
+  See `Variables.cmake` to learn about existing project cached variables. That
+  listfile is intended for editing existing cached variables or/and adding
+  additional ones.
+
+  Included submodules:
+    * see `compiler/Common.cmake` for details
+    * TODO: add other submodules
+
   Commands:
-    * Submodules:
-      - see `compiler/Common.cmake` for details
-      - TODO: add other submodules
     * Guards:
       - no_in_source_builds_guard
     * Watchers:
@@ -57,7 +62,7 @@ include_guard(GLOBAL)
 #]=============================================================================]
 macro(__init_common)
   # This guard should be at the beginning
-  after_project_guard()
+  __after_project_guard()
 
   if(CMAKE_VERSION LESS "3.14")
     message(FATAL_ERROR
@@ -96,7 +101,7 @@ endmacro()
 
 # For internal use: prevent including any listfiles before the `project` command
 # in the current project root listfile.
-function(after_project_guard)
+function(__after_project_guard)
   if (NOT PROJECT_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     get_filename_component(file_name "${CMAKE_CURRENT_LIST_FILE}" NAME)
     message(FATAL_ERROR

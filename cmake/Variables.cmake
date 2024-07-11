@@ -1,9 +1,11 @@
 #[=============================================================================[
   Project namespace, options, and cached variables.
+  ------------------------------------------------------------------------------
+  This listfile is intended for editing existing cached variables or/and adding
+  additional ones.
 #]=============================================================================]
 
 include_guard(GLOBAL)
-after_project_guard()
 
 
 # By default, it is `${PROJECT_NAME}` in uppercase/lowercase letters with
@@ -106,6 +108,6 @@ endif(ENABLE_INSTALL)
 ############################ Variable init guard ###############################
 
 # For internal use: prevent processing listfiles before including `Variables`
-function(variable_init_guard)
+function(__variable_init_guard)
   # Do nothing, just check if this function exists
 endfunction()

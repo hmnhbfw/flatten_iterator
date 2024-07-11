@@ -14,7 +14,6 @@
 #]=============================================================================]
 
 include_guard(GLOBAL)
-after_project_guard()
 
 
 # Set `CMAKE_${LANG}_COMPILER_LAUNCHER` if `ccache` is enabled and found

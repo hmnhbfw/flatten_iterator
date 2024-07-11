@@ -1,7 +1,6 @@
 include_guard(GLOBAL)
-after_project_guard()
 no_in_source_builds_guard()
-variable_init_guard()
+__variable_init_guard()
 
 
 ############################ Dependency management #############################
