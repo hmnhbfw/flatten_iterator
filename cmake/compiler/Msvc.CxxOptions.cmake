@@ -1,3 +1,11 @@
+#[=============================================================================[
+  Author: Pavel Tsayukov
+  Distributed under the MIT License. See accompanying file LICENSE or
+  https://opensource.org/license/mit for details.
+  ------------------------------------------------------------------------------
+  MSVC compiler options
+#]=============================================================================]
+
 include_guard(GLOBAL)
 
 
