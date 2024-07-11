@@ -42,4 +42,4 @@ if (NOT benchmark_FOUND)
   FetchContent_MakeAvailable(benchmark)
 endif(NOT benchmark_FOUND)
 
-add_subdirectory(benchmarks)
+add_subdirectory(${BENCHMARK_DIR})

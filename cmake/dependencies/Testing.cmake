@@ -49,4 +49,4 @@ endif(NOT GTest_FOUND)
 # Get the `gtest_add_tests()` and `gtest_discover_tests()` command
 include(GoogleTest)
 
-add_subdirectory(tests)
+add_subdirectory(${TEST_DIR})
