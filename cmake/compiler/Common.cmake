@@ -62,6 +62,8 @@ variable_init_guard()
 # For internal use: this macro must be called at the end of the current listfile.
 # It defines commands and variables to work with enabled languages.
 macro(__init_compiler_common)
+  include_project_module(dependencies/Ccache)
+
   get_property(__languages GLOBAL PROPERTY ENABLED_LANGUAGES)
   foreach (__lang IN LISTS __languages)
     string(TOUPPER "${__lang}" __LANG)
@@ -69,6 +71,7 @@ macro(__init_compiler_common)
 
     __include_compiler_commands(${__lang} ${__LANG})
     __include_compiler_options(${__lang} ${__LANG})
+    use_ccache_if_enabled_for(${__LANG})
   endforeach()
 endmacro()
 
@@ -221,12 +224,9 @@ endmacro()
 
 
 macro(__include_compiler_options lang LANG)
-  include_project_module(dependencies/Ccache)
-
   # So far, support only C++ options
   if ("${LANG}" STREQUAL "CXX")
     include_project_module(compiler/CxxOptions)
-    use_ccache_if_enabled_for(CXX)
   endif()
 
   # TODO: add C options support

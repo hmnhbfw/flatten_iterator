@@ -17,12 +17,18 @@ include_guard(GLOBAL)
 after_project_guard()
 
 
-# Set `CMAKE_${LANG}_COMPILER_LAUNCHER` if `ccache` is enabled and found.
+# Set `CMAKE_${LANG}_COMPILER_LAUNCHER` if `ccache` is enabled and found
 function(use_ccache_if_enabled_for LANG)
   enable_if_project_variable_is_set(ENABLE_CCACHE)
+
+  if (NOT LANG MATCHES "^((OBJ)?C(XX)?|ASM.*|CUDA)$")
+    message(AUTHOR_WARNING "${LANG} is not supported by ccache.")
+    return()
+  endif()
+
   if (CCACHE_PATH)
     set(CMAKE_${LANG}_COMPILER_LAUNCHER
-      "${CCACHE_PATH}" CACHE FILEPATH "${LANG} compiler launcher"
+      "${CCACHE_PATH}" CACHE FILEPATH "${LANG} compiler launcher" FORCE
     )
   endif()
 endfunction()
