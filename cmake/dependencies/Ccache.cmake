@@ -36,6 +36,7 @@ endfunction()
 enable_if_project_variable_is_set(ENABLE_CCACHE)
 
 find_program(CCACHE_PATH ccache)
+mark_as_advanced(CCACHE_PATH)
 if (NOT CCACHE_PATH)
   message(AUTHOR_WARNING
     "\n"

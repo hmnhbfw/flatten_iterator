@@ -102,7 +102,7 @@ find_path(doxygen_awesome_SOURCE_DIR
   PATH_SUFFIXES
     share/doxygen-awesome-css
 )
-mark_as_advanced(FORCE doxygen_awesome_SOURCE_DIR)
+mark_as_advanced(doxygen_awesome_SOURCE_DIR)
 if (NOT doxygen_awesome_SOURCE_DIR)
   can_install_locally(doxygen_awesome)
   include(FetchContent)
