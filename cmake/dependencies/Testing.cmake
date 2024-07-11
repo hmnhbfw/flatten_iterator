@@ -1,3 +1,19 @@
+#[=============================================================================[
+  Author: Pavel Tsayukov
+  Distributed under the MIT License. See accompanying file LICENSE or
+  https://opensource.org/license/mit for details.
+  ------------------------------------------------------------------------------
+  Testing library
+  ------------------------------------------------------------------------------
+  Specify other testing library if you want so. Otherwise, you may also want to
+  specify a particular version of GTest in the `find_package(GTest <version>)`
+  command and use other GIT_TAG in the `FetchContent_Declare()` command.
+
+  Enable the `${NAMESPACE_UPPER}_ENABLE_DEVELOPER_MODE` or
+  `${NAMESPACE_UPPER}_ENABLE_TESTING` project option to turn testing on.
+  See `../Variables.cmake` for details.
+#]=============================================================================]
+
 include_guard(GLOBAL)
 cxx_standard_guard()
 
@@ -5,13 +21,6 @@ cxx_standard_guard()
 enable_if_project_variable_is_set(ENABLE_TESTING)
 
 enable_testing()
-
-#[=============================================================================[
-  TODO(?): specify other testing library if you want so.
-  Otherwise, you may also want to specify a particular version of GTest
-  in the `find_package(GTest <version>)` command and use other GIT_TAG
-  in the `FetchContent_Declare()` command.
-#]=============================================================================]
 
 use_cxx_standard_at_least(14)
 
@@ -31,11 +40,11 @@ if (NOT GTest_FOUND)
 
   set(INSTALL_GTEST OFF)
 
-  # TODO(?): set `ON` if testing your project uses GMock
+  # Set `ON` if testing your project uses GMock
   set(BUILD_GMOCK OFF)
 
   FetchContent_MakeAvailable(GTest)
-endif()
+endif(NOT GTest_FOUND)
 
 # Get the `gtest_add_tests()` and `gtest_discover_tests()` command
 include(GoogleTest)

@@ -1,3 +1,14 @@
+#[=============================================================================[
+  Author: Pavel Tsayukov
+  Distributed under the MIT License. See accompanying file LICENSE or
+  https://opensource.org/license/mit for details.
+  ------------------------------------------------------------------------------
+  Documentation generation
+  ------------------------------------------------------------------------------
+  Enable the `${NAMESPACE_UPPER}_ENABLE_DOCS` project option to turn
+  documentation generation on. See `../Variables.cmake` for details.
+#]=============================================================================]
+
 include_guard(GLOBAL)
 
 
@@ -67,7 +78,6 @@ endfunction()
 
 
 enable_if_project_variable_is_set(ENABLE_DOCS)
-
 
 ################## Initialization the documentation generator ##################
 

@@ -1,15 +1,25 @@
+#[=============================================================================[
+  Author: Pavel Tsayukov
+  Distributed under the MIT License. See accompanying file LICENSE or
+  https://opensource.org/license/mit for details.
+  ------------------------------------------------------------------------------
+  Benchmarking library
+  ------------------------------------------------------------------------------
+  Specify other benchmarking library if you want so. Otherwise, you may also
+  want to specify a particular version of the google benchmark library in the
+  `find_package(benchmark <version>)` command and use other GIT_TAG in the
+  `FetchContent_Declare()` command.
+
+  Enable the `${NAMESPACE_UPPER}_ENABLE_DEVELOPER_MODE` or
+  `${NAMESPACE_UPPER}_ENABLE_BENCHMARKING` project option to turn benchmarking
+  on. See `../Variables.cmake` for details.
+#]=============================================================================]
+
 include_guard(GLOBAL)
 cxx_standard_guard()
 
 
 enable_if_project_variable_is_set(ENABLE_BENCHMARKING)
-
-#[=============================================================================[
-  TODO(?): specify other benchmarking library if you want so.
-  Otherwise, you may also want to specify a particular version of the google
-  benchmark library in the `find_package(benchmark <version>)` command and use
-  other GIT_TAG in the `FetchContent_Declare()` command.
-#]=============================================================================]
 
 use_cxx_standard_at_least(11)
 
@@ -30,6 +40,6 @@ if (NOT benchmark_FOUND)
   set(BENCHMARK_ENABLE_GTEST_TESTS OFF)
 
   FetchContent_MakeAvailable(benchmark)
-endif()
+endif(NOT benchmark_FOUND)
 
 add_subdirectory(benchmarks)

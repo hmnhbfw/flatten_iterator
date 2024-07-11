@@ -11,6 +11,7 @@
 
   Included submodules:
     * see `compiler/Common.cmake` for details
+    * see `dependencies/Common.cmake` for details
     * TODO: add other submodules
 
   Commands:
