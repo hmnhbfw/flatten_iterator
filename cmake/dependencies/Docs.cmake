@@ -47,7 +47,7 @@ function(add_docs_if_enabled target_alias)
   set(options "")
   set(one_value_keywords FORMAT OUTPUT)
   set(multi_value_keywords INPUTS)
-  cmake_parse_arguments(PARSE_ARGV 1 "args"
+  cmake_parse_arguments(PARSE_ARGV 1 "ARGS"
     "${options}"
     "${one_value_keywords}"
     "${multi_value_keywords}"
@@ -55,26 +55,26 @@ function(add_docs_if_enabled target_alias)
 
   enable_if_project_variable_is_set(ENABLE_DOCS)
 
-  if (NOT args_OUTPUT)
-    string(TOLOWER ${args_FORMAT} args_OUTPUT)
+  if (NOT ARGS_OUTPUT)
+    string(TOLOWER ${ARGS_FORMAT} ARGS_OUTPUT)
   endif()
 
-  if (IS_ABSOLUTE "${args_OUTPUT}")
-    set(output "${args_OUTPUT}")
+  if (IS_ABSOLUTE "${ARGS_OUTPUT}")
+    set(output "${ARGS_OUTPUT}")
   else()
-    set(output "${DOXYGEN_OUTPUT_DIRECTORY}/${args_OUTPUT}")
+    set(output "${DOXYGEN_OUTPUT_DIRECTORY}/${ARGS_OUTPUT}")
   endif()
 
-  string(TOUPPER ${args_FORMAT} args_FORMAT)
+  string(TOUPPER ${ARGS_FORMAT} ARGS_FORMAT)
 
-  set(DOXYGEN_GENERATE_${args_FORMAT} YES)
-  set(DOXYGEN_${args_FORMAT}_OUTPUT "${output}")
+  set(DOXYGEN_GENERATE_${ARGS_FORMAT} YES)
+  set(DOXYGEN_${ARGS_FORMAT}_OUTPUT "${output}")
 
   set(target ${namespace}_${target_alias})
   doxygen_add_docs(
-    ${target} ${args_INPUTS}
+    ${target} ${ARGS_INPUTS}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-    COMMENT "Generate ${args_FORMAT} documentation"
+    COMMENT "Generate ${ARGS_FORMAT} documentation"
   )
   set(${target_alias} ${target} PARENT_SCOPE)
 
