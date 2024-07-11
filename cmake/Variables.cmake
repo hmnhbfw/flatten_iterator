@@ -89,11 +89,6 @@ if (ENABLE_INSTALL)
     "The package name used by the `find_package` command"
   )
 
-  project_cached_variable(INSTALL_INCLUDE_DIR
-    "${CMAKE_INSTALL_INCLUDEDIR}" PATH
-    "Installation directory for public headers"
-  )
-
   project_cached_variable(INSTALL_CMAKE_DIR
     "${CMAKE_INSTALL_DATAROOTDIR}/${PACKAGE_NAME}/cmake" PATH
     "Installation directory for CMake configuration files"
