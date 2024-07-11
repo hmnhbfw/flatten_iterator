@@ -51,6 +51,9 @@ project_option(ENABLE_TREATING_INCLUDES_AS_SYSTEM
   "Use the `SYSTEM` option for the project's includes, compilers may disable warnings"
   ON IF (NOT PROJECT_IS_TOP_LEVEL)
 )
+if (ENABLE_TREATING_INCLUDES_AS_SYSTEM)
+  project_cached_variable(WARNING_GUARD "SYSTEM" STRING "Warning guard")
+endif()
 
 
 ############################## Developer options ###############################
