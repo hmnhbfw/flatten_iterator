@@ -7,6 +7,18 @@
   ------------------------------------------------------------------------------
   Enable the `${NAMESPACE}_ENABLE_DOCS` project option to turn
   documentation generation on. See `../Variables.cmake` for details.
+
+  Usage:
+
+  # File: CMakeLists.txt
+
+    include_project_module(dependencies/Docs)
+    add_docs_if_enabled(docs FORMAT html
+      INPUTS
+        include
+        README.md
+    )
+
 #]=============================================================================]
 
 include_guard(GLOBAL)
