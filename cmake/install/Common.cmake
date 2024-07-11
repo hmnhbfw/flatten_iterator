@@ -110,7 +110,7 @@ function(install_cmake_configs)
       "${PROJECT_BINARY_DIR}/${config_file}"
       "${PROJECT_BINARY_DIR}/${config_version_file}"
     DESTINATION "${INSTALL_CMAKE_DIR}"
-    COMPONENT "configs"
+    COMPONENT "${namespace}_configs"
   )
 endfunction()
 
@@ -162,7 +162,7 @@ function(install_header_only_library)
   install(DIRECTORY
       ${include_dir_path_list}
     DESTINATION "${INSTALL_INCLUDE_DIR}"
-    COMPONENT "headers"
+    COMPONENT "${namespace}_headers"
     FILES_MATCHING
       PATTERN "*.h"
       PATTERN "*.hpp"
@@ -184,7 +184,7 @@ function(install_header_only_library)
       "${export_target_name}"
     NAMESPACE ${namespace}::
     DESTINATION "${INSTALL_CMAKE_DIR}"
-    COMPONENT "configs"
+    COMPONENT "${namespace}_configs"
   )
 endfunction()
 

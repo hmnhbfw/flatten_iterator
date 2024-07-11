@@ -84,7 +84,7 @@ function(add_docs_if_enabled target_alias)
       "${output}"
     DESTINATION
       "${INSTALL_DOC_DIR}"
-    COMPONENT "docs" EXCLUDE_FROM_ALL
+    COMPONENT "${namespace}_docs" EXCLUDE_FROM_ALL
   )
 endfunction()
 
