@@ -89,6 +89,11 @@ if (ENABLE_INSTALL)
     "The package name used by the `find_package` command"
   )
 
+  project_cached_variable(PACKAGE_EXPORT_TARGET_NAME
+    "${PACKAGE_NAME}Targets" STRING
+    "Name without extension of a file exporting targets for dependent projects"
+  )
+
   project_cached_variable(INSTALL_CMAKE_DIR
     "${CMAKE_INSTALL_DATAROOTDIR}/${PACKAGE_NAME}/cmake" PATH
     "Installation directory for CMake configuration files"
