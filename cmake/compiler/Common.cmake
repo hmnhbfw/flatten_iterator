@@ -3,17 +3,25 @@
   Distributed under the MIT License. See accompanying file LICENSE or
   https://opensource.org/license/mit for details.
   ------------------------------------------------------------------------------
-  TODO: add listfile description
+  Define commands, variables, and targets to work with enabled languages.
   ------------------------------------------------------------------------------
-  Commands for language `lang` (e.g. `c`, `cxx`, in lower case):
+  Commands for language `${lang}` (e.g. `c`, `cxx`, in lower case):
     * Common commands:
-      - get_<lang>_compiler_version
+      - get_${lang}_compiler_version
     * C/C++ standard:
-      - use_<lang>_standard_at_least
-      - <lang>_standard_guard
+      - use_${lang}_standard_at_least
+      - ${lang}_standard_guard
     * C/C++ extensions toggle:
-      - enable_<lang>_extensions
-      - disable_<lang>_extensions
+      - enable_${lang}_extensions
+      - disable_${lang}_extensions
+    * Interface C/C++ libraries (use `target_link_libraries` to link against
+      them):
+      - ${${lang}_standard}
+      - ${cxx_options}
+      - ${cxx_warning_options}
+      - ${cxx_error_options}
+      - ${cxx_language_options}
+      - ${cxx_diagnostic_options}
 
   Usage:
 
@@ -28,6 +36,11 @@
     disable_cxx_extensions()
 
     add_subdirectory(externals)
+
+    add_project_library(my_library)
+    target_link_libraries(${my_library} PUBLIC ${cxx_standard})
+    target_link_libraries(${my_library} PRIVATE ${cxx_options})
+    # other target commands
 
   # File: externals/CMakeLists.txt
     no_in_source_builds_guard()
@@ -50,7 +63,6 @@
   Still, toggling between different `CMAKE_CXX_STANDARD` for different builds is
   a good way to test your project against different standard, no less than the
   least required.
-
 #]=============================================================================]
 
 include_guard(GLOBAL)

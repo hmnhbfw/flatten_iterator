@@ -6,6 +6,9 @@
   Include common variables and commands.
   ------------------------------------------------------------------------------
   Commands:
+    * Submodules:
+      - see `compiler/Common.cmake` for details
+      - TODO: add other submodules
     * Guards:
       - no_in_source_builds_guard
     * Watchers:
@@ -31,7 +34,6 @@
       - print
       - print_var
       - print_var_with
-    * TODO: add other modules
 
   Usage:
 
