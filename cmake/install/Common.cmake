@@ -1,3 +1,13 @@
+#[=============================================================================[
+  Author: Pavel Tsayukov
+  Distributed under the MIT License. See accompanying file LICENSE or
+  https://opensource.org/license/mit for details.
+  ------------------------------------------------------------------------------
+  Installation commands
+  ------------------------------------------------------------------------------
+  TODO: add description
+#]=============================================================================]
+
 include_guard(GLOBAL)
 no_in_source_builds_guard()
 __variable_init_guard()
@@ -12,7 +22,7 @@ enable_if_project_variable_is_set(ENABLE_INSTALL)
 include(CMakePackageConfigHelpers)
 
 
-############################## Installation rules ##############################
+############################# Installation commands ############################
 
 #[=============================================================================[
   Create and install CMake configuration files for using the `find_package`
