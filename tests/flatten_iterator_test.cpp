@@ -90,4 +90,122 @@ TEST(Traits, IsIterable) {
                   "Class with friend `begin/end` must be iterable");
 }
 
+
+template <typename Container, typename... Ranges>
+void CompareTuplesOfRanges() noexcept {
+    namespace fid = flatten_iterator::details;
+
+    using std::begin, std::end;
+
+    Container c = {};
+    static_assert(std::is_same_v
+            < decltype(fid::TupleOfRanges(begin(c), end(c)))
+            , std::tuple<Ranges...>
+            >);
+}
+
+TEST(TypeList, Ranges) {
+    namespace fid = flatten_iterator::details;
+
+    CompareTuplesOfRanges
+            < ContinuousC<int>
+            , fid::Range
+                    < ContinuousC<int>::iterator
+                    , ContinuousC<int>::iterator
+                    >
+            >();
+
+    CompareTuplesOfRanges
+            < std::vector<bool>
+            , fid::Range
+                    < std::vector<bool>::iterator
+                    , std::vector<bool>::iterator
+                    >
+            >();
+
+    CompareTuplesOfRanges
+            < const ContinuousC<int>
+            , fid::Range
+                    < ContinuousC<int>::const_iterator
+                    , ContinuousC<int>::const_iterator
+                    >
+            >();
+
+    CompareTuplesOfRanges
+            < ContinuousC<ContinuousC<int>>
+            , fid::Range
+                    < ContinuousC<ContinuousC<int>>::iterator
+                    , ContinuousC<ContinuousC<int>>::iterator
+                    >
+            , fid::Range
+                    < ContinuousC<int>::iterator
+                    , ContinuousC<int>::iterator
+                    >
+            >();
+
+    CompareTuplesOfRanges
+            < const ContinuousC<ContinuousC<int>>
+            , fid::Range
+                    < ContinuousC<ContinuousC<int>>::const_iterator
+                    , ContinuousC<ContinuousC<int>>::const_iterator
+                    >
+            , fid::Range
+                    < ContinuousC<int>::const_iterator
+                    , ContinuousC<int>::const_iterator
+                    >
+            >();
+
+    CompareTuplesOfRanges
+            < Array<int, 2>
+            , fid::Range
+                    < int*
+                    , int*
+                    >
+            >();
+
+    CompareTuplesOfRanges
+            < const Array<int, 2>
+            , fid::Range
+                    < const int*
+                    , const int*
+                    >
+            >();
+
+    CompareTuplesOfRanges
+            < Array<Array<int, 2>, 2>
+            , fid::Range
+                    < int(*)[2]
+                    , int(*)[2]
+                    >
+            , fid::Range
+                    < int*
+                    , int*
+                    >
+            >();
+
+    {
+        using Range1 = fid::Range<const int(*)[2], const int(*)[2]>;
+        using Range2 = fid::Range<const int*, const int*>;
+
+        CompareTuplesOfRanges
+                < Array<const Array<int, 2>, 2>
+                , Range1
+                , Range2
+                >();
+
+        CompareTuplesOfRanges
+                < const Array<Array<int, 2>, 2>
+                , Range1
+                , Range2
+                >();
+
+        CompareTuplesOfRanges
+                < const Array<const Array<int, 2>, 2>
+                , Range1
+                , Range2
+                >();
+
+    }
+}
+
 // TODO: add tests

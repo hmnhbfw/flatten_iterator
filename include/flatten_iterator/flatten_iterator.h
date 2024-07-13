@@ -46,6 +46,59 @@ struct Type {
     using type = T;
 };
 
+template <typename Iterator, typename Sentinel>
+struct Range {
+    Iterator current;
+    Sentinel end;
+};
+
+// Stubs for the unused second type parameter of `std::enable_if_t`
+using AnyType = int;
+constexpr AnyType AnyValue = {};
+
+template
+        < typename ValueType
+        , typename... RangeWrappers
+        , std::enable_if_t
+                < !traits::is_iterable_v<ValueType>
+                , AnyType
+                > = AnyValue
+        >
+constexpr auto TupleOfRangeWrappers(std::tuple<RangeWrappers...> acc) noexcept {
+    return acc;
+}
+
+template
+        < typename ValueType
+        , typename... RangeWrappers
+        , std::enable_if_t
+                < traits::is_iterable_v<ValueType>
+                , AnyType
+                > = AnyValue
+        >
+constexpr auto TupleOfRangeWrappers(std::tuple<RangeWrappers...> acc) noexcept {
+    using Iterator = traits::begin_t<ValueType>;
+    using Sentinel = traits::end_t<ValueType>;
+    using RangeWrapper = Type<Range<Iterator, Sentinel>>;
+    using NestedValueType = std::remove_reference_t<decltype(*std::declval<Iterator&>())>;
+
+    return TupleOfRangeWrappers<NestedValueType>(std::tuple_cat(acc, std::tuple<RangeWrapper>{}));
+}
+
+template <typename... RangeWrappers>
+constexpr auto UnwrapTupleOfRangeWrappers(std::tuple<RangeWrappers...>) noexcept {
+    return std::tuple<typename RangeWrappers::type...>{};
+}
+
+template <typename Iterator, typename Sentinel>
+constexpr auto TupleOfRanges(Iterator&& begin, Sentinel&&) noexcept {
+    using RangeWrapper = Type<Range<Iterator, Sentinel>>;
+    using ValueType = std::remove_reference_t<decltype(*begin)>;
+
+    const auto range_wrappers = TupleOfRangeWrappers<ValueType>(std::tuple<RangeWrapper>{});
+    return UnwrapTupleOfRangeWrappers(range_wrappers);
+}
+
 } // namespace details
 
 /// TODO: add description
