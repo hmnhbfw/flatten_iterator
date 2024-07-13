@@ -1,0 +1,147 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "debug",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "ninja-generator",
+      "hidden": true,
+      "generator": "Ninja"
+    },
+    {
+      "name": "unix-generator",
+      "hidden": true,
+      "generator": "Unix Makefiles"
+    },
+    {
+      "name": "vs-generator",
+      "hidden": true,
+      "generator": "Visual Studio 17 2022"
+    },
+    {
+      "name": "clang",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "gcc",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "cxx-std-17",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "17"
+      }
+    },
+    {
+      "name": "cxx-std-20",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "20"
+      }
+    },
+    {
+      "name": "cxx-std-23",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "23"
+      }
+    },
+    {
+      "name": "cmake-pedantic",
+      "hidden": true,
+      "warnings": {
+        "dev": true,
+        "deprecated": true,
+        "uninitialized": true,
+        "unusedCli": true,
+        "systemVars": false
+      },
+      "errors": {
+        "dev": true,
+        "deprecated": true
+      }
+    },
+    {
+      "name": "dev-mode",
+      "hidden": true,
+      "inherits": "cmake-pedantic",
+      "cacheVariables": {
+        "FLATTEN_ITERATOR_ENABLE_DEVELOPER_MODE": "TRUE"
+      }
+    },
+    {
+      "name": "default-dev-build",
+      "hidden": true,
+      "inherits": ["ninja-generator", "clang", "dev-mode"]
+    },
+    {
+      "name": "debug",
+      "inherits": ["default-dev-build", "debug", "cxx-std-17"],
+      "displayName": "Default Tests Debug",
+      "description": "Configure debug test build with Clang and Ninja"
+    },
+    {
+      "name": "release",
+      "inherits": ["default-dev-build", "release", "cxx-std-17"],
+      "displayName": "Default Tests Release",
+      "description": "Configure release test build with Clang and Ninja"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "common",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "common",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "inherits": "common",
+      "configurePreset": "release"
+    }
+  ],
+  "packagePresets": [
+
+  ],
+  "workflowPresets": [
+
+  ]
+}
