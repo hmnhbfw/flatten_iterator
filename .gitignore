@@ -1,6 +1,9 @@
 # All dot directories in the root
 /.*/
 
+# JSON Compilation Database
+compile_commands.json
+
 # CMake User Presets
 CMakeUserPresets.json
 
