@@ -104,6 +104,46 @@ constexpr auto TupleOfRanges(Iterator&& begin, Sentinel&&) noexcept {
 /// TODO: add description
 template <typename Iterator, typename Sentinel>
 class FlattenIterator {
+    using Ranges =
+            decltype(details::TupleOfRanges(std::declval<Iterator>(), std::declval<Sentinel>()));
+    Ranges ranges_;
+
+private: // Ranges getter/setter/traversing
+
+    static constexpr std::size_t MaxDepth = std::tuple_size_v<Ranges>;
+
+    template <std::size_t Depth>
+    constexpr auto& Range() noexcept {
+        return std::get<Depth>(ranges_);
+    }
+
+    template <std::size_t Depth>
+    constexpr auto& Current() noexcept {
+        return Range<Depth>().current;
+    }
+
+    template <std::size_t Depth>
+    constexpr auto& End() noexcept {
+        return Range<Depth>().end;
+    }
+
+    // TODO: impl NextUp, NextDown, and similar methods
+
+public: // Nested iterator types
+    // TODO: figure out types
+    using value_type = void;
+    using difference_type = void;
+    using reference = void;
+    using pointer = void;
+    using iterator_category = void;
+
+#if 0
+    // TODO: figure out type, then remove the outer `if`
+#if defined(__cpp_concepts) && __cpp_concepts >= 201907L
+    using iterator_concept = void;
+#endif
+#endif
+
     // TODO: impl
 };
 
