@@ -18,6 +18,12 @@ namespace traits {
 
 using std::begin, std::end;
 
+template <typename T>
+using begin_t = decltype(begin(std::declval<T&>()));
+
+template <typename T>
+using end_t = decltype(end(std::declval<T&>()));
+
 template <typename T, typename = void>
 constexpr bool is_iterable_v = false;
 
@@ -25,8 +31,11 @@ template <typename T>
 constexpr bool is_iterable_v
         < T
         , std::void_t
-                < decltype(begin(std::declval<T&>()))
-                , decltype(end(std::declval<T&>()))
+                < begin_t<T>
+                , end_t<T>
+                , decltype(std::declval<begin_t<T>&>() != std::declval<end_t<T>&>())
+                , decltype(*std::declval<begin_t<T>&>())
+                , decltype(++std::declval<begin_t<T>&>())
                 >
         > = true;
 

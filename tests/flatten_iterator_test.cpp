@@ -64,17 +64,30 @@ public:
 TEST(Traits, IsIterable) {
     namespace fidt = flatten_iterator::details::traits;
 
-    static_assert(!fidt::is_iterable_v<int>, "`int` is not iterable");
+    struct VoidProducer {
+        void begin() noexcept {}
+        void end() noexcept {}
+    };
+    static_assert(!fidt::is_iterable_v<VoidProducer>);
+
+    struct NonIteratorProducer {
+        int begin() noexcept { return 42; }
+        int end() noexcept { return 42; }
+    };
+    static_assert(!fidt::is_iterable_v<NonIteratorProducer>);
+
+    static_assert(!fidt::is_iterable_v<int>);
+
     static_assert(fidt::is_iterable_v<Array<int, 42>>,
-                  "Built-in array is iterable");
+                  "Built-in array must be iterable");
     static_assert(fidt::is_iterable_v<ContinuousC<int>>,
-                  "Regular container is iterable");
+                  "Regular container must be iterable");
     static_assert(fidt::is_iterable_v<std::vector<bool>>,
-                  "`std::vector<bool>` is iterable");
+                  "`std::vector<bool>` must  be iterable");
     static_assert(fidt::is_iterable_v<adl::ContainerWithFreeBeginEnd>,
-                  "Class with free `begin/end` is iterable");
+                  "Class with free `begin/end` must be iterable");
     static_assert(fidt::is_iterable_v<adl::ContainerWithFriendBeginEnd>,
-                  "Class with friend `begin/end` is iterable");
+                  "Class with friend `begin/end` must be iterable");
 }
 
 // TODO: add tests
