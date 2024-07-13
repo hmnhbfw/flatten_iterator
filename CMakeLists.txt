@@ -28,9 +28,19 @@ target_link_libraries(${flatten_iterator} INTERFACE ${cxx_standard})
 target_include_directories(${flatten_iterator}
   ${WARNING_GUARD}
   INTERFACE
-    "$<BUILD_INTERFACE:include>"
+    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 )
 
 include_project_module(DeveloperMode)
 
-include_project_module(install/Rules)
+if (ENABLE_INSTALL)
+  install_project_cmake_configs(COMPATIBILITY "SameMajorVersion" ARCH_INDEPENDENT)
+  install_project_license()
+  install_project_headers("include")
+  install_project_targets(TARGETS ${flatten_iterator} ${cxx_standard} HEADER_ONLY)
+
+  set(CPACK_PACKAGE_VENDOR "Pavel Tsayukov")
+  set(CPACK_PACKAGE_FILE_NAME "${PACKAGE_NAME}-${PROJECT_VERSION}")
+  set(CPACK_PACKAGE_CHECKSUM "SHA256")
+  include(CPack)
+endif()
