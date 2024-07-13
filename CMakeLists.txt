@@ -31,6 +31,8 @@ target_include_directories(${flatten_iterator}
     "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 )
 
+add_subdirectory(src)
+
 include_project_module(DeveloperMode)
 
 if (ENABLE_INSTALL)

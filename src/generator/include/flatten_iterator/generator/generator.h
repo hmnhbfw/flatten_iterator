@@ -1,0 +1,10 @@
+#ifndef FLATTEN_ITERATOR_GENERATOR_GENERATOR_H
+#define FLATTEN_ITERATOR_GENERATOR_GENERATOR_H
+
+namespace generator {
+
+// TODO: impl
+
+} // namespace generator
+
+#endif // FLATTEN_ITERATOR_GENERATOR_GENERATOR_H
