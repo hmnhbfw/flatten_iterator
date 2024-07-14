@@ -2,7 +2,7 @@
   "version": 6,
   "configurePresets": [
     {
-      "name": "debug",
+      "name": "debug-build",
       "hidden": true,
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
@@ -10,7 +10,7 @@
       }
     },
     {
-      "name": "release",
+      "name": "release-build",
       "hidden": true,
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
@@ -99,13 +99,13 @@
     },
     {
       "name": "debug",
-      "inherits": ["default-dev-build", "debug", "cxx-std-17"],
+      "inherits": ["default-dev-build", "debug-build", "cxx-std-17"],
       "displayName": "Default Tests Debug",
       "description": "Configure debug test build with Clang and Ninja"
     },
     {
       "name": "release",
-      "inherits": ["default-dev-build", "release", "cxx-std-17"],
+      "inherits": ["default-dev-build", "release-build", "cxx-std-17"],
       "displayName": "Default Tests Release",
       "description": "Configure release test build with Clang and Ninja"
     }
@@ -123,6 +123,7 @@
   "testPresets": [
     {
       "name": "common",
+      "hidden": true,
       "output": {
         "outputOnFailure": true
       }
