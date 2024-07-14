@@ -24,8 +24,11 @@ disable_cxx_extensions()
 include_project_module(Externals)
 
 add_project_library(flatten_iterator INTERFACE)
-target_link_libraries(${flatten_iterator} INTERFACE ${cxx_standard})
-target_include_directories(${flatten_iterator}
+target_link_libraries(flatten_iterator_flatten_iterator
+  INTERFACE
+    flatten_iterator_cxx_standard
+)
+target_include_directories(flatten_iterator_flatten_iterator
   ${WARNING_GUARD}
   INTERFACE
     "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
@@ -39,7 +42,12 @@ if (ENABLE_INSTALL)
   install_project_cmake_configs(COMPATIBILITY "SameMajorVersion" ARCH_INDEPENDENT)
   install_project_license()
   install_project_headers("include")
-  install_project_targets(TARGETS ${flatten_iterator} ${cxx_standard} HEADER_ONLY)
+  install_project_targets(
+    TARGETS
+      flatten_iterator_flatten_iterator
+      flatten_iterator_cxx_standard
+    HEADER_ONLY
+  )
 
   set(CPACK_PACKAGE_VENDOR "Pavel Tsayukov")
   set(CPACK_PACKAGE_FILE_NAME "${PACKAGE_NAME}-${PROJECT_VERSION}")
