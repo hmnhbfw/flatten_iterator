@@ -188,10 +188,9 @@ endmacro()
   with underscores. On the contrary, it is recommended to name targets in
   lowercase letters with underscore. The prefix, aka namespace, format is
   selected accordingly, in uppercase or lowercase letters with underscores.
-  In addition, normal variables are defined for all project cached variables
-  and targets. For project cached variables, these variables are set to the
-  value of the corresponding project cached variable. For project targets, these
-  variables are set to the true target name.
+  In addition, normal variables are defined for all project cached variables as
+  short aliases. These variables are set to the value of the corresponding
+  project cached variable.
 
   E.g. the `project_option(ENABLE_FEATURE "Enable a cool feature" ON)` command
   is trying to set an option, aka boolean cached variable, named by
@@ -203,24 +202,29 @@ endmacro()
   by `my_library` is also defined and set to the true target name.
   Typical usage: `target_compile_features(${my_library} INTERFACE cxx_std_20)`.
 
+  Let's say we define a project target named by `${namespace}_my_library`.
   The `EXPORT_NAME` property is also added to the target and set to `my_library`.
-  It is nessecary in order to use the `install(TARGETS ${my_library} ...)` and
-  then `install(EXPORT ... NAMESCAPE ${namespace}::)` to export the target
-  as `${namespace}::my_library`.
+  It is nessecary in order to use the command below to export the target as
+  `${namespace}::my_library`:
+
+    install(TARGETS ${namespace}_my_library ...)
+    install(EXPORT ... NAMESCAPE ${namespace}::)
 
   An alias target named by `${namespace}::my_library` is also defined.
   When a consuming project gets this project via the `find_package` command
   it uses exported targets, e.g. `${namespace}::my_library`, that defined
   by `install(EXPORT ... NAMESPACE ${namespace}::)`.
   But if a consuming project gets this project via the `FetchContent` module or
-  `add_subdirectory` command it has to use `${my_library}` until this project
-  adds an alias defenition:
+  `add_subdirectory` command it has to use `${namespace}_my_library` until this
+  project adds an alias defenition:
 
-    add_library(${namespace}::my_library ALIAS ${my_library})
+    add_library(${namespace}::my_library ALIAS ${namespace}_my_library)
 
   Summing up, changing the method of getting this project won't cause
-  to change `target_link_libraries(<consuming_target> ... <namespace>::<target>)`
-  usage in any of these cases.
+  to change the command usage below in any of these cases:
+
+    `target_link_libraries(<consuming_target> ... ${namespace}::my_library)`
+
 #]=============================================================================]
 
 # Define the namespace, by default it is `${PROJECT_NAME}` in the appropriate
@@ -253,8 +257,8 @@ macro(include_project_module module)
 endmacro()
 
 # Enable the rest of a listfile if the project cached variable is set
-macro(enable_if_project_variable_is_set SUFFIX)
-  if (NOT ${NAMESPACE}_${SUFFIX})
+macro(enable_if_project_variable_is_set variable_suffix)
+  if (NOT ${NAMESPACE}_${variable_suffix})
     return()
   endif()
 endmacro()
@@ -329,24 +333,22 @@ function(project_cached_variable variable_alias value type docstring)
   set(${variable_alias} ${${NAMESPACE}_${variable_alias}} PARENT_SCOPE)
 endfunction()
 
-# Add a project library target called by `${namespace}_${target_alias}`.
-# All parameters of the `add_library` command are passed after `target_alias`.
-function(add_project_library target_alias)
-  set(${target_alias} ${namespace}_${target_alias})
-  add_library(${${target_alias}} ${ARGN})
-  add_library(${namespace}::${target_alias} ALIAS ${${target_alias}})
-  set_target_properties(${${target_alias}} PROPERTIES EXPORT_NAME ${target_alias})
-  set(${target_alias} ${${target_alias}} PARENT_SCOPE)
+# Add a project library target called by `${namespace}_${target_suffix}`.
+# All parameters of the `add_library` command are passed after `target_suffix`.
+function(add_project_library target_suffix)
+  set(target ${namespace}_${target_suffix})
+  add_library(${target} ${ARGN})
+  add_library(${namespace}::${target_suffix} ALIAS ${target})
+  set_target_properties(${target} PROPERTIES EXPORT_NAME ${target_suffix})
 endfunction()
 
-# Add an executable target called by `${namespace}_${target_alias}`.
-# All parameters of the `add_executable` command are passed after `target_alias`.
-function(add_project_executable target_alias)
-  set(${target_alias} ${namespace}_${target_alias})
-  add_executable(${${target_alias}} ${ARGN})
-  add_executable(${namespace}::${target_alias} ALIAS ${${target_alias}})
-  set_target_properties(${${target_alias}} PROPERTIES EXPORT_NAME ${target_alias})
-  set(${target_alias} ${${target_alias}} PARENT_SCOPE)
+# Add an executable target called by `${namespace}_${target_suffix}`.
+# All parameters of the `add_executable` command are passed after `target_suffix`.
+function(add_project_executable target_suffix)
+  set(target ${namespace}_${target_suffix})
+  add_executable(${target} ${ARGN})
+  add_executable(${namespace}::${target_suffix} ALIAS ${target})
+  set_target_properties(${target} PROPERTIES EXPORT_NAME ${target_suffix})
 endfunction()
 
 macro(get_project_target_property variable target project_property)

@@ -14,14 +14,15 @@
     * C/C++ extensions toggle:
       - enable_${lang}_extensions
       - disable_${lang}_extensions
-    * Interface C/C++ libraries (use `target_link_libraries` to link against
+    * Interface C/C++ library (use `target_link_libraries` to link against
       them):
-      - ${${lang}_standard}
-      - ${cxx_options}
-      - ${cxx_warning_options}
-      - ${cxx_error_options}
-      - ${cxx_language_options}
-      - ${cxx_diagnostic_options}
+      - ${namespace}_${lang}_standard
+    * Normal variables as lists (use `target_compile_options` to include them):
+      - CXX_OPTIONS
+      - CXX_WARNING_OPTIONS
+      - CXX_ERROR_OPTIONS
+      - CXX_LANGUAGE_OPTIONS
+      - CXX_DIAGNOSTIC_OPTIONS
 
   Usage:
 
@@ -38,8 +39,12 @@
     add_subdirectory(externals)
 
     add_project_library(my_library)
-    target_link_libraries(${my_library} PUBLIC ${cxx_standard})
-    target_link_libraries(${my_library} PRIVATE ${cxx_options})
+    target_link_libraries(my_project_name_my_library
+      PUBLIC my_project_name_cxx_standard
+    )
+    target_compile_options(my_project_name_my_library
+      PRIVATE ${CXX_OPTIONS}
+    )
     # other target commands
 
   # File: externals/CMakeLists.txt
@@ -149,13 +154,14 @@ macro(__include_compiler_commands lang LANG)
 
     #[=========================================================================[
       Check if `CMAKE_${LANG}_STANDARD` is set to at least `standard` and
-      in the very first call define the `${${lang}_standard}` target as
-      an interface library with the corresponding standard which other targets
-      can link against. `${${lang}_standard}` should be treated as the
-      least supported standard of this library. The first time this function
-      should be called in the root listfile to define `${${lang}_standard}`.
+      in the very first call define the `${namespace}_${lang}_standard` target
+      as an interface library with the corresponding standard which other
+      targets can link against. `${namespace}_${lang}_standard` should be
+      treated as a target with the least supported standard of this library.
+      The first time this function should be called in the root listfile to
+      define `${namespace}_${lang}_standard`.
       Use its next calls to check if some dependency's requirement is not
-      greater than `${${lang}_standard}`.
+      greater than the standard in `${namespace}_${lang}_standard`.
     #]=========================================================================]
     function(use_${lang}_standard_at_least standard)
       # Helper comparison of C/C++ standards
@@ -190,11 +196,10 @@ macro(__include_compiler_commands lang LANG)
         )
       endif()
 
-      set(target_alias ${lang}_standard)
-      if (NOT TARGET ${${target_alias}})
-        add_project_library(${target_alias} INTERFACE)
-        set(target ${${target_alias}})
-        set(${target_alias} ${target} PARENT_SCOPE)
+      set(target_suffix ${lang}_standard)
+      set(target ${namespace}_${target_suffix})
+      if (NOT TARGET ${target})
+        add_project_library(${target_suffix} INTERFACE)
         target_compile_features(${target}
           INTERFACE
             ${lang}_std_${current_standard}
@@ -207,7 +212,7 @@ macro(__include_compiler_commands lang LANG)
 
     # Raise an error if the `${${lang}_standard}` target is not defined
     function(${lang}_standard_guard)
-      if (NOT TARGET ${${lang}_standard})
+      if (NOT TARGET ${namespace}_${lang}_standard)
         message(FATAL_ERROR
           "\n"
           "The `${namespace}_${lang}_standard` target must be defined.\n"
@@ -220,12 +225,18 @@ macro(__include_compiler_commands lang LANG)
     ######################### C/C++ extensions toggle ##########################
 
     function(enable_${lang}_extensions)
-      set_target_properties(${${lang}_standard} PROPERTIES ${LANG}_EXTENSIONS ON)
+      set_target_properties(${namespace}_${lang}_standard
+        PROPERTIES
+          ${LANG}_EXTENSIONS ON
+      )
       set(CMAKE_${LANG}_EXTENSIONS ON PARENT_SCOPE)
     endfunction()
 
     function(disable_${lang}_extensions)
-      set_target_properties(${${lang}_standard} PROPERTIES ${LANG}_EXTENSIONS OFF)
+      set_target_properties(${namespace}_${lang}_standard
+        PROPERTIES
+          ${LANG}_EXTENSIONS OFF
+      )
       set(CMAKE_${LANG}_EXTENSIONS OFF PARENT_SCOPE)
     endfunction()
 
