@@ -60,6 +60,8 @@ set(CXX_ERROR_OPTIONS
   -Wno-error=non-virtual-dtor
 )
 
+set(CXX_LANGUAGE_OPTIONS "")
+
 set(CXX_DIAGNOSTIC_OPTIONS
   # See: https://gcc.gnu.org/onlinedocs/gcc/Diagnostic-Message-Formatting-Options.html
 
