@@ -69,10 +69,12 @@ function(install_project_cmake_configs)
 
   list(APPEND ARGS_PATH_VARS "INSTALL_CMAKE_DIR")
 
+  set(no_set_and_check_macro "")
   if (ARGS_NO_SET_AND_CHECK_MACRO)
     set(no_set_and_check_macro "NO_SET_AND_CHECK_MACRO")
   endif()
 
+  set(no_check_required_components_macro "")
   if (ARGS_NO_CHECK_REQUIRED_COMPONENTS_MACRO)
     set(no_check_required_components_macro "NO_CHECK_REQUIRED_COMPONENTS_MACRO")
   endif()

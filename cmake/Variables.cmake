@@ -53,6 +53,8 @@ project_option(ENABLE_TREATING_INCLUDES_AS_SYSTEM
 )
 if (ENABLE_TREATING_INCLUDES_AS_SYSTEM)
   project_cached_variable(WARNING_GUARD "SYSTEM" STRING "Warning guard")
+else()
+  project_cached_variable(WARNING_GUARD "" STRING "Warning guard")
 endif()
 
 
