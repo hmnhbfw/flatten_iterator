@@ -20,7 +20,7 @@ git subtree --squash --prefix=cmake pull cmake-modules main
 
 License
 -------
-This CMake modules are distributed under the [MIT License](./LICENSE), but other projects that use this modules can have its own license.
+These CMake modules are distributed under the [MIT License](./LICENSE), but other projects that use this modules can have its own license.
 
 Extra materials
 ---------------
