@@ -1,6 +1,0 @@
-@PACKAGE_INIT@
-
-set_and_check(INSTALL_CMAKE_DIR "@PACKAGE_INSTALL_CMAKE_DIR@")
-include("${INSTALL_CMAKE_DIR}/@PACKAGE_NAME@Targets.cmake")
-
-check_required_components(@PACKAGE_NAME@)
