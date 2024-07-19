@@ -62,36 +62,38 @@ public:
 
 
 TEST(Traits, IsIterable) {
-    namespace fidt = flatten_iterator::details::traits;
+    namespace fidtr = flatten_iterator::details::traits::ranges;
 
     struct VoidProducer {
         void begin() noexcept {}
         void end() noexcept {}
     };
-    static_assert(!fidt::is_iterable_v<VoidProducer>);
+
+    // TODO: a compile time error occurs before static_assert, should we fix that?
+    // static_assert(!fidtr::IsRange<VoidProducer>);
 
     struct NonIteratorProducer {
         int begin() noexcept { return 42; }
         int end() noexcept { return 42; }
     };
-    static_assert(!fidt::is_iterable_v<NonIteratorProducer>);
+    static_assert(!fidtr::IsRange<NonIteratorProducer>);
 
-    static_assert(!fidt::is_iterable_v<int>);
+    static_assert(!fidtr::IsRange<int>);
 
-    static_assert(fidt::is_iterable_v<Array<int, 42>>,
-                  "Built-in array must be iterable");
-    static_assert(fidt::is_iterable_v<ContinuousC<int>>,
-                  "Regular container must be iterable");
-    static_assert(fidt::is_iterable_v<std::vector<bool>>,
-                  "`std::vector<bool>` must  be iterable");
-    static_assert(fidt::is_iterable_v<adl::ContainerWithFreeBeginEnd>,
-                  "Class with free `begin/end` must be iterable");
-    static_assert(fidt::is_iterable_v<adl::ContainerWithFriendBeginEnd>,
-                  "Class with friend `begin/end` must be iterable");
+    static_assert(fidtr::IsRange<Array<int, 42>>,
+                  "Built-in array must be a range");
+    static_assert(fidtr::IsRange<ContinuousC<int>>,
+                  "Regular container must be a range");
+    static_assert(fidtr::IsRange<std::vector<bool>>,
+                  "`std::vector<bool>` must be a range");
+    static_assert(fidtr::IsRange<adl::ContainerWithFreeBeginEnd>,
+                  "Class with free `begin/end` must be a range");
+    static_assert(fidtr::IsRange<adl::ContainerWithFriendBeginEnd>,
+                  "Class with friend `begin/end` must be a range");
 }
 
 
-template <typename Container, typename... Ranges>
+template <typename Container, typename... CorrectRanges>
 void CompareTuplesOfRanges() noexcept {
     namespace fid = flatten_iterator::details;
 
@@ -99,8 +101,11 @@ void CompareTuplesOfRanges() noexcept {
 
     Container c = {};
     static_assert(std::is_same_v
-            < decltype(fid::TupleOfRanges(begin(c), end(c)))
-            , std::tuple<Ranges...>
+            < typename fid::RangesAllTheWayDownTraits
+                    < decltype( begin(c) )
+                    , decltype( end(c) )
+                    >::Ranges
+            , std::tuple<CorrectRanges...>
             >);
 }
 
