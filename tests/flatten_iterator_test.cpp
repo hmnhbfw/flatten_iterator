@@ -61,156 +61,173 @@ public:
 } // namespace adl
 
 
-TEST(Traits, IsIterable) {
-    namespace fidtr = flatten_iterator::details::traits::ranges;
+using Traits =
+#if defined(__cpp_concepts) && __cpp_concepts >= 201907L
+        flatten_iterator::DefaultConceptRangeTraits
+#else
+        flatten_iterator::DefaultPreConceptRangeTraits;
+#endif
 
+
+TEST(Traits, IsRange) {
     struct VoidProducer {
         void begin() noexcept {}
         void end() noexcept {}
     };
-
-    // TODO: a compile time error occurs before static_assert, should we fix that?
-    // static_assert(!fidtr::IsRange<VoidProducer>);
+    EXPECT_TRUE(!Traits::range<VoidProducer>);
 
     struct NonIteratorProducer {
         int begin() noexcept { return 42; }
         int end() noexcept { return 42; }
     };
-    static_assert(!fidtr::IsRange<NonIteratorProducer>);
+    EXPECT_TRUE(!Traits::range<NonIteratorProducer>);
 
-    static_assert(!fidtr::IsRange<int>);
+    EXPECT_TRUE(!Traits::range<int>);
 
-    static_assert(fidtr::IsRange<Array<int, 42>>,
-                  "Built-in array must be a range");
-    static_assert(fidtr::IsRange<ContinuousC<int>>,
-                  "Regular container must be a range");
-    static_assert(fidtr::IsRange<std::vector<bool>>,
-                  "`std::vector<bool>` must be a range");
-    static_assert(fidtr::IsRange<adl::ContainerWithFreeBeginEnd>,
-                  "Class with free `begin/end` must be a range");
-    static_assert(fidtr::IsRange<adl::ContainerWithFriendBeginEnd>,
-                  "Class with friend `begin/end` must be a range");
+    EXPECT_TRUE((Traits::range<Array<int, 42>>))
+            << "Built-in array must be a range";
+    EXPECT_TRUE(Traits::range<ContinuousC<int>>)
+            << "Regular container must be a range";
+    EXPECT_TRUE(Traits::range<std::vector<bool>>)
+            << "`std::vector<bool>` must be a range";
+    EXPECT_TRUE(Traits::range<adl::ContainerWithFreeBeginEnd>)
+            << "Class with free `begin/end` must be a range";
+    EXPECT_TRUE(Traits::range<adl::ContainerWithFriendBeginEnd>)
+            << "Class with friend `begin/end` must be a range";
 }
 
 
-template <typename Container, typename... CorrectRanges>
-void CompareTuplesOfRanges() noexcept {
-    namespace fid = flatten_iterator::details;
+template <typename R>
+using TypeList = typename flatten_iterator::details
+        ::RangesAllTheWayDownTraits
+                < decltype( Traits::begin(std::declval<R&>()) )
+                , decltype( Traits::end(std::declval<R&>()) )
+                , Traits
+                >::Ranges;
 
-    using std::begin, std::end;
-
-    Container c = {};
-    static_assert(std::is_same_v
-            < typename fid::RangesAllTheWayDownTraits
-                    < decltype( begin(c) )
-                    , decltype( end(c) )
-                    >::Ranges
-            , std::tuple<CorrectRanges...>
-            >);
-}
+template <typename... PRs>
+using ExpectedTypeList = std::tuple<PRs...>;
 
 TEST(TypeList, Ranges) {
     namespace fid = flatten_iterator::details;
 
-    CompareTuplesOfRanges
-            < ContinuousC<int>
-            , fid::Range
-                    < ContinuousC<int>::iterator
-                    , ContinuousC<int>::iterator
+    EXPECT_TRUE((std::is_same_v
+            < TypeList<ContinuousC<int>>
+            , ExpectedTypeList
+                    < fid::PseudoRange
+                            < ContinuousC<int>::iterator
+                            , ContinuousC<int>::iterator
+                            >
                     >
-            >();
+            >));
 
-    CompareTuplesOfRanges
-            < std::vector<bool>
-            , fid::Range
-                    < std::vector<bool>::iterator
-                    , std::vector<bool>::iterator
+    EXPECT_TRUE((std::is_same_v
+            < TypeList<std::vector<bool>>
+            , ExpectedTypeList
+                    < fid::PseudoRange
+                            < std::vector<bool>::iterator
+                            , std::vector<bool>::iterator
+                            >
                     >
-            >();
+            >));
 
-    CompareTuplesOfRanges
-            < const ContinuousC<int>
-            , fid::Range
-                    < ContinuousC<int>::const_iterator
-                    , ContinuousC<int>::const_iterator
+    EXPECT_TRUE((std::is_same_v
+            < TypeList<const ContinuousC<int>>
+            , ExpectedTypeList
+                    < fid::PseudoRange
+                            < ContinuousC<int>::const_iterator
+                            , ContinuousC<int>::const_iterator
+                            >
                     >
-            >();
+            >));
 
-    CompareTuplesOfRanges
-            < ContinuousC<ContinuousC<int>>
-            , fid::Range
-                    < ContinuousC<ContinuousC<int>>::iterator
-                    , ContinuousC<ContinuousC<int>>::iterator
+    EXPECT_TRUE((std::is_same_v
+            < TypeList
+                    < const ContinuousC<ContinuousC<int>>
                     >
-            , fid::Range
-                    < ContinuousC<int>::iterator
-                    , ContinuousC<int>::iterator
+            , ExpectedTypeList
+                    < fid::PseudoRange
+                            < ContinuousC<ContinuousC<int>>::const_iterator
+                            , ContinuousC<ContinuousC<int>>::const_iterator
+                            >
+                    , fid::PseudoRange
+                            < ContinuousC<int>::const_iterator
+                            , ContinuousC<int>::const_iterator
+                            >
                     >
-            >();
+            >));
 
-    CompareTuplesOfRanges
-            < const ContinuousC<ContinuousC<int>>
-            , fid::Range
-                    < ContinuousC<ContinuousC<int>>::const_iterator
-                    , ContinuousC<ContinuousC<int>>::const_iterator
+    EXPECT_TRUE((std::is_same_v
+            < TypeList<Array<int, 2>>
+            , ExpectedTypeList
+                    < fid::PseudoRange
+                            < int*
+                            , int*
+                            >
                     >
-            , fid::Range
-                    < ContinuousC<int>::const_iterator
-                    , ContinuousC<int>::const_iterator
-                    >
-            >();
+            >));
 
-    CompareTuplesOfRanges
-            < Array<int, 2>
-            , fid::Range
-                    < int*
-                    , int*
+    EXPECT_TRUE((std::is_same_v
+            < TypeList<const Array<int, 2>>
+            , ExpectedTypeList
+                    < fid::PseudoRange
+                            < const int*
+                            , const int*
+                            >
                     >
-            >();
+            >));
 
-    CompareTuplesOfRanges
-            < const Array<int, 2>
-            , fid::Range
-                    < const int*
-                    , const int*
+    EXPECT_TRUE((std::is_same_v
+            < TypeList
+                    < Array<Array<int, 2>, 2>
                     >
-            >();
-
-    CompareTuplesOfRanges
-            < Array<Array<int, 2>, 2>
-            , fid::Range
-                    < int(*)[2]
-                    , int(*)[2]
+            , ExpectedTypeList
+                    < fid::PseudoRange
+                            < int(*)[2]
+                            , int(*)[2]
+                            >
+                    , fid::PseudoRange
+                            < int*
+                            , int*
+                            >
                     >
-            , fid::Range
-                    < int*
-                    , int*
-                    >
-            >();
+            >));
 
     {
-        using Range1 = fid::Range<const int(*)[2], const int(*)[2]>;
-        using Range2 = fid::Range<const int*, const int*>;
+        using Range1 = fid::PseudoRange<const int(*)[2], const int(*)[2]>;
+        using Range2 = fid::PseudoRange<const int*, const int*>;
 
-        CompareTuplesOfRanges
-                < Array<const Array<int, 2>, 2>
-                , Range1
-                , Range2
-                >();
+        EXPECT_TRUE((std::is_same_v
+                < TypeList
+                        < Array<const Array<int, 2>, 2>
+                        >
+                , ExpectedTypeList
+                        < Range1
+                        , Range2
+                        >
+                >));
 
-        CompareTuplesOfRanges
-                < const Array<Array<int, 2>, 2>
-                , Range1
-                , Range2
-                >();
+        EXPECT_TRUE((std::is_same_v
+                < TypeList
+                        < const Array<Array<int, 2>, 2>
+                        >
+                , ExpectedTypeList
+                        < Range1
+                        , Range2
+                        >
+                >));
 
-        CompareTuplesOfRanges
-                < const Array<const Array<int, 2>, 2>
-                , Range1
-                , Range2
-                >();
-
+        EXPECT_TRUE((std::is_same_v
+                < TypeList
+                        < const Array< const Array<int, 2>, 2>
+                        >
+                , ExpectedTypeList
+                        < Range1
+                        , Range2
+                        >
+                >));
     }
 }
+
 
 // TODO: add tests
