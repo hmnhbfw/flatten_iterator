@@ -63,9 +63,9 @@ public:
 
 using Traits =
 #if defined(__cpp_concepts) && __cpp_concepts >= 201907L
-        flatten_iterator::DefaultConceptRangeTraits
+        flatten::DefaultConceptRangeTraits
 #else
-        flatten_iterator::DefaultPreConceptRangeTraits;
+        flatten::DefaultPreConceptRangeTraits;
 #endif
 
 
@@ -98,7 +98,7 @@ TEST(Traits, IsRange) {
 
 
 template <typename R>
-using TypeList = typename flatten_iterator::details
+using TypeList = typename flatten::details
         ::RangesAllTheWayDownTraits
                 < decltype( Traits::begin(std::declval<R&>()) )
                 , decltype( Traits::end(std::declval<R&>()) )
@@ -109,12 +109,12 @@ template <typename... PRs>
 using ExpectedTypeList = std::tuple<PRs...>;
 
 TEST(TypeList, Ranges) {
-    namespace fid = flatten_iterator::details;
+    namespace fd = flatten::details;
 
     EXPECT_TRUE((std::is_same_v
             < TypeList<ContinuousC<int>>
             , ExpectedTypeList
-                    < fid::PseudoRange
+                    < fd::PseudoRange
                             < ContinuousC<int>::iterator
                             , ContinuousC<int>::iterator
                             >
@@ -124,7 +124,7 @@ TEST(TypeList, Ranges) {
     EXPECT_TRUE((std::is_same_v
             < TypeList<std::vector<bool>>
             , ExpectedTypeList
-                    < fid::PseudoRange
+                    < fd::PseudoRange
                             < std::vector<bool>::iterator
                             , std::vector<bool>::iterator
                             >
@@ -134,7 +134,7 @@ TEST(TypeList, Ranges) {
     EXPECT_TRUE((std::is_same_v
             < TypeList<const ContinuousC<int>>
             , ExpectedTypeList
-                    < fid::PseudoRange
+                    < fd::PseudoRange
                             < ContinuousC<int>::const_iterator
                             , ContinuousC<int>::const_iterator
                             >
@@ -146,11 +146,11 @@ TEST(TypeList, Ranges) {
                     < const ContinuousC<ContinuousC<int>>
                     >
             , ExpectedTypeList
-                    < fid::PseudoRange
+                    < fd::PseudoRange
                             < ContinuousC<ContinuousC<int>>::const_iterator
                             , ContinuousC<ContinuousC<int>>::const_iterator
                             >
-                    , fid::PseudoRange
+                    , fd::PseudoRange
                             < ContinuousC<int>::const_iterator
                             , ContinuousC<int>::const_iterator
                             >
@@ -160,7 +160,7 @@ TEST(TypeList, Ranges) {
     EXPECT_TRUE((std::is_same_v
             < TypeList<Array<int, 2>>
             , ExpectedTypeList
-                    < fid::PseudoRange
+                    < fd::PseudoRange
                             < int*
                             , int*
                             >
@@ -170,7 +170,7 @@ TEST(TypeList, Ranges) {
     EXPECT_TRUE((std::is_same_v
             < TypeList<const Array<int, 2>>
             , ExpectedTypeList
-                    < fid::PseudoRange
+                    < fd::PseudoRange
                             < const int*
                             , const int*
                             >
@@ -182,11 +182,11 @@ TEST(TypeList, Ranges) {
                     < Array<Array<int, 2>, 2>
                     >
             , ExpectedTypeList
-                    < fid::PseudoRange
+                    < fd::PseudoRange
                             < int(*)[2]
                             , int(*)[2]
                             >
-                    , fid::PseudoRange
+                    , fd::PseudoRange
                             < int*
                             , int*
                             >
@@ -194,8 +194,8 @@ TEST(TypeList, Ranges) {
             >));
 
     {
-        using Range1 = fid::PseudoRange<const int(*)[2], const int(*)[2]>;
-        using Range2 = fid::PseudoRange<const int*, const int*>;
+        using Range1 = fd::PseudoRange<const int(*)[2], const int(*)[2]>;
+        using Range2 = fd::PseudoRange<const int*, const int*>;
 
         EXPECT_TRUE((std::is_same_v
                 < TypeList

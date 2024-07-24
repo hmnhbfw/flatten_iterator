@@ -8,7 +8,9 @@
 
 #include "range_traits.h"
 
-namespace flatten_iterator {
+namespace flatten {
+
+namespace require = details::traits::require;
 
 /// TODO: add description
 template
@@ -20,32 +22,31 @@ template
 #else
                 DefaultPreConceptRangeTraits
 #endif
-        , typename = details::traits::require::Traits
+        , typename = require::AllOf
                 < RangeTraits::template input_or_output_iterator<I>
                 , RangeTraits::template sentinel_for<I, S>
                 >
         >
-class FlattenIterator {
+class Iterator {
     using Traits = details::RangesAllTheWayDownTraits<I, S, RangeTraits>;
 
     typename Traits::Ranges ranges_;
 
 public: // Nested iterator types
 
-    using value_type = typename Traits::ValueType;
-    using difference_type = typename Traits::DifferenceType;
-    using reference = typename Traits::Reference;
-    using pointer = typename Traits::Pointer;
-    using iterator_category = typename Traits::IteratorCategory;
+    using value_type = typename Traits::value_type;
+    using difference_type = typename Traits::difference_type;
+    using reference = typename Traits::reference;
+    using pointer = typename Traits::pointer;
+    using iterator_category = typename Traits::iterator_category;
 
 #if defined(__cpp_concepts) && __cpp_concepts >= 201907L
-    using iterator_concept = typename Traits::IteratorConcept;
+    using iterator_concept = typename Traits::iterator_concept;
 #endif
 
 public: // Constructors
 
-    template <typename Iterator, typename Sentinel>
-    FlattenIterator(Iterator begin, Sentinel end) { // TODO: add noexcept
+    Iterator(I begin, S end) { // TODO: add noexcept
         // TODO: impl
     }
 
@@ -54,6 +55,6 @@ public: // TODO: add name for section
     // TODO: impl
 };
 
-} // namespace flatten_iterator
+} // namespace flatten
 
 #endif // FLATTEN_ITERATOR_FLATTEN_ITERATOR_H

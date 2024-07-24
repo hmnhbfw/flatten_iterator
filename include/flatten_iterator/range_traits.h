@@ -14,7 +14,7 @@
     #include <ranges>
 #endif
 
-namespace flatten_iterator {
+namespace flatten {
 
 namespace details {
 
@@ -29,10 +29,10 @@ namespace traits {
 namespace require {
 
 template <bool... HasTraits>
-using Traits = std::enable_if_t<(HasTraits && ...)>;
+using AllOf = std::enable_if_t<(HasTraits && ...)>;
 
 template <bool... HasTraits>
-using AnyOfTraits = std::enable_if_t<(HasTraits || ...)>;
+using AnyOf = std::enable_if_t<(HasTraits || ...)>;
 
 template <typename... Ts>
 inline constexpr bool Requires = std::is_void_v<std::void_t<Ts...>>;
@@ -56,10 +56,10 @@ template <typename From>
 using Producer = std::add_rvalue_reference_t<From> (&)();
 
 template <typename From, typename To>
-constexpr auto ExplicitCastImpl(Producer<From> f) -> decltype( static_cast<To>(f()) );
+constexpr auto explicit_cast_impl(Producer<From> f) -> decltype( static_cast<To>(f()) );
 
 template <typename From, typename To>
-using ExplicitCast = decltype( ExplicitCastImpl<From, To>(std::declval<Producer<From>>()) );
+using ExplicitCast = decltype( explicit_cast_impl<From, To>(std::declval<Producer<From>>()) );
 
 } // namespace impl
 
@@ -67,7 +67,7 @@ using ExplicitCast = decltype( ExplicitCastImpl<From, To>(std::declval<Producer<
 template <typename From, typename To>
 inline constexpr bool IsConvertibleTo
         < From, To
-        , require::Traits
+        , require::AllOf
                 < std::is_convertible_v<From, To>
                 , require::Requires<impl::ExplicitCast<From, To>>
                 >
@@ -123,7 +123,7 @@ using CommonLvalueRef = CondRes<CopyCv<X, Y>&, CopyCv<Y, X>&>;
 template <typename T1, typename T2>
 struct CommonRefImpl
         < T1&, T2&
-        , require::Traits
+        , require::AllOf
                 < std::is_reference_v<CommonLvalueRef<T1, T2>>
                 >
         > {
@@ -136,7 +136,7 @@ using CommonRefC = std::remove_reference_t<CommonRef<X&, Y&>>&&;
 template <typename T1, typename T2>
 struct CommonRefImpl
         < T1&&, T2&&
-        , require::Traits
+        , require::AllOf
                 < std::is_convertible_v<T1&&, CommonRefC<T1, T2>>
                 , std::is_convertible_v<T2&&, CommonRefC<T1, T2>>
                 >
@@ -150,7 +150,7 @@ using CommonRefD = CommonRef<const X&, Y&>;
 template <typename T1, typename T2>
 struct CommonRefImpl
         < T1&&, T2&
-        , require::Traits
+        , require::AllOf
                 < std::is_convertible_v<T1&&, CommonRefD<T1, T2>>
                 >
         > {
@@ -165,7 +165,7 @@ struct CommonRefImpl<T1&, T2&&> : CommonRefImpl<T2&&, T1&> {};
 template <typename T1, typename T2>
 struct CommonReference
         < T1, T2, 1
-        , require::Traits
+        , require::AllOf
                 < std::is_reference_v<T1>
                 , std::is_reference_v<T2>
                 , require::Requires<CommonRef<T1, T2>>
@@ -185,7 +185,7 @@ struct CommonReference<T1, T2, 2> {
 template <typename T1, typename T2>
 struct CommonReference
         < T1, T2, 3
-        , require::Traits
+        , require::AllOf
                 < require::Requires<CondRes<T1, T2>>
                 >
         > {
@@ -196,7 +196,7 @@ struct CommonReference
 template <typename T1, typename T2>
 struct CommonReference
         < T1, T2, 4
-        , require::Traits
+        , require::AllOf
                 < require::Requires<std::common_type_t<T1, T2>>
                 >
         > {
@@ -213,7 +213,7 @@ struct CommonReference<T1, T2, 5> {};
 template <typename T, typename U>
 inline constexpr bool IsCommonReferenceWith
         < T, U
-        , require::Traits
+        , require::AllOf
                 < IsSameAs
                         < impl::CommonReferenceType<T, U>
                         , impl::CommonReferenceType<U, T>
@@ -238,7 +238,7 @@ constexpr auto ForwardThenAssign(Lhs lhs, Rhs&& rhs) -> decltype( lhs = std::for
 template <typename Lhs, typename Rhs>
 inline constexpr bool IsAssignableFrom
         < Lhs, Rhs
-        , require::Traits
+        , require::AllOf
                 < std::is_lvalue_reference_v<Lhs>
                 , IsCommonReferenceWith
                         < const std::remove_reference_t<Lhs>&
@@ -274,7 +274,7 @@ inline constexpr bool IsDefaultInitializable = false;
 template <typename T>
 inline constexpr bool IsDefaultInitializable
         < T
-        , require::Traits
+        , require::AllOf
                 < IsConstructibleFrom<T>
                 , require::Requires
                         < decltype( T{} )
@@ -311,7 +311,7 @@ template <typename T>
 inline constexpr bool IsBooleanTestableImpl = lang::IsConvertibleTo<T, bool>;
 
 template <typename T>
-constexpr auto ForwardThenNot(T&& t) -> decltype( !std::forward<T>(t) );
+constexpr auto forward_then_not(T&& t) -> decltype( !std::forward<T>(t) );
 
 } // namespace impl
 
@@ -319,10 +319,10 @@ constexpr auto ForwardThenNot(T&& t) -> decltype( !std::forward<T>(t) );
 template <typename T>
 inline constexpr bool IsBooleanTestable
         < T
-        , require::Traits
+        , require::AllOf
                 < impl::IsBooleanTestableImpl<T>
                 , impl::IsBooleanTestableImpl
-                        < decltype( impl::ForwardThenNot(std::declval<T&&>()) )
+                        < decltype( impl::forward_then_not(std::declval<T&&>()) )
                         >
                 >
         > = true;
@@ -334,7 +334,8 @@ inline constexpr bool IsWeaklyEqualityComparableWith = false;
 namespace impl {
 
 template <typename T, typename U>
-constexpr auto Equal(const std::remove_reference_t<T>& t, const std::remove_reference_t<U>& u)
+constexpr auto equal_and_not_equal(const std::remove_reference_t<T>& t,
+                                   const std::remove_reference_t<U>& u)
         -> decltype( t == u, t != u, u == t, u != t, void() );
 
 } // namespace impl
@@ -343,8 +344,8 @@ constexpr auto Equal(const std::remove_reference_t<T>& t, const std::remove_refe
 template <typename T, typename U>
 inline constexpr bool IsWeaklyEqualityComparableWith
         < T, U
-        , require::Traits
-                < require::Requires<decltype( impl::Equal<T, U> )>
+        , require::AllOf
+                < require::Requires<decltype( impl::equal_and_not_equal<T, U> )>
                 >
         > = true;
 
@@ -381,10 +382,10 @@ inline constexpr bool IsWeaklyIncrementable = false;
 namespace impl {
 
 template <typename I>
-constexpr auto PreIncrement(I i) -> decltype( ++i );
+constexpr auto pre_increment(I i) -> decltype( ++i );
 
 template <typename I>
-constexpr auto PostIncrement(I i) -> decltype( i++, void() );
+constexpr auto post_increment(I i) -> decltype( i++, void() );
 
 // NOTE: this check is not as accurate as it should be
 // TODO: no check for the `__int128` extension (gcc and clang both support it)
@@ -399,7 +400,7 @@ inline constexpr bool IsSignedIntegerLike =
 template <typename I>
 inline constexpr bool IsWeaklyIncrementable
         < I
-        , require::Traits
+        , require::AllOf
                 < object::IsMovable<I>
                 , impl::IsSignedIntegerLike
                         // NOTE: check only iterators, so there is no need to
@@ -407,10 +408,10 @@ inline constexpr bool IsWeaklyIncrementable
                         < typename std::iterator_traits<I>::difference_type
                         >
                 , lang::IsSameAs
-                        < decltype( impl::PreIncrement(std::declval<I>()) )
+                        < decltype( impl::pre_increment(std::declval<I>()) )
                         , I&
                         >
-                , require::Requires<decltype( impl::PostIncrement(std::declval<I>()) )>
+                , require::Requires<decltype( impl::post_increment(std::declval<I>()) )>
                 >
         > = true;
 
@@ -426,11 +427,11 @@ inline constexpr bool CanReference = false;
 template <typename T>
 inline constexpr bool CanReference
         < T
-        , require::Traits<require::Requires<T&>>
+        , require::AllOf<require::Requires<T&>>
         > = true;
 
 template <typename I>
-constexpr auto Dereference(I i) -> decltype( *i );
+constexpr auto dereference(I i) -> decltype( *i );
 
 } // namespace impl
 
@@ -438,9 +439,9 @@ constexpr auto Dereference(I i) -> decltype( *i );
 template <typename I>
 inline constexpr bool IsInputOrOutputIterator
         < I
-        , require::Traits
+        , require::AllOf
                 < impl::CanReference
-                        < decltype( impl::Dereference(std::declval<I>()) )
+                        < decltype( impl::dereference(std::declval<I>()) )
                         >
                 , IsWeaklyIncrementable<I>
                 >
@@ -453,7 +454,7 @@ inline constexpr bool IsSentinelFor = false;
 template <typename I,  typename S>
 inline constexpr bool IsSentinelFor
         < I, S
-        , require::Traits
+        , require::AllOf
                 < object::IsSemiregular<S>
                 , IsInputOrOutputIterator<I>
                 , comparison::IsWeaklyEqualityComparableWith<S, I>
@@ -473,7 +474,7 @@ template
                 < lang::IsConvertibleTo<T, std::decay_t<T>>
                 >
         >
-constexpr auto DecayCopy(T&& value) -> std::decay_t<decltype( std::forward<T>(value) )>;
+constexpr auto decay_copy(T&& value) -> std::decay_t<decltype( std::forward<T>(value) )>;
 
 template <typename T>
 inline constexpr bool IsClassOrEnum =
@@ -488,14 +489,14 @@ template <typename R, typename = void>
 inline constexpr bool HasBeginMember = false;
 
 template <typename R>
-constexpr auto BeginMemberHelper(R& r) -> decltype( DecayCopy(r.begin()) );
+constexpr auto begin_member_impl(R& r) -> decltype( decay_copy(r.begin()) );
 
 template <typename R>
 inline constexpr bool HasBeginMember
         < R
-        , require::Traits
+        , require::AllOf
                 < iterator::IsInputOrOutputIterator
-                        < decltype( BeginMemberHelper(std::declval<R&>()) )
+                        < decltype( begin_member_impl(std::declval<R&>()) )
                         >
                 >
         > = true;
@@ -504,41 +505,41 @@ template <typename R, typename = void>
 inline constexpr bool HasAdlBegin = false;
 
 template <typename R>
-constexpr auto AdlBeginHelper(R& r) -> decltype( DecayCopy(begin(r)) );
+constexpr auto adl_begin_impl(R& r) -> decltype( decay_copy(begin(r)) );
 
 template <typename R>
 inline constexpr bool HasAdlBegin
         < R
-        , require::Traits
+        , require::AllOf
                 < IsClassOrEnum<std::remove_reference_t<R>>
                 , iterator::IsInputOrOutputIterator
-                        < decltype( AdlBeginHelper(std::declval<R&>()) )
+                        < decltype( adl_begin_impl(std::declval<R&>()) )
                         >
                 >
         > = true;
 
 class Begin {
     template <typename R>
-    static constexpr bool IsNoexcept() noexcept {
+    static constexpr bool is_noexcept() noexcept {
         if constexpr (std::is_array_v<std::remove_reference_t<R>>) {
             return true;
         } else if constexpr (HasBeginMember<R>) {
-            return noexcept(DecayCopy(std::declval<R&>().begin()));
+            return noexcept(decay_copy(std::declval<R&>().begin()));
         } else {
-            return noexcept(DecayCopy(begin(std::declval<R&>())));
+            return noexcept(decay_copy(begin(std::declval<R&>())));
         }
     }
 
 public:
     template
             < typename R
-            , typename = require::AnyOfTraits
+            , typename = require::AnyOf
                     < std::is_array_v<std::remove_reference_t<R>>
                     , HasBeginMember<R>
                     , HasAdlBegin<R>
                     >
             >
-    constexpr auto operator()(R&& r) const noexcept(IsNoexcept<R>()) {
+    constexpr auto operator()(R&& r) const noexcept(is_noexcept<R>()) {
         if constexpr (std::is_array_v<std::remove_reference_t<R>>) {
             static_assert(std::is_lvalue_reference_v<R>,
                           "Since an array can't be a borrowed range it must be "
@@ -567,15 +568,15 @@ template <typename R, typename = void>
 inline constexpr bool HasEndMember = false;
 
 template <typename R>
-constexpr auto EndMemberHelper(R& r) -> decltype( DecayCopy(r.end()) );
+constexpr auto end_member_helper(R& r) -> decltype( decay_copy(r.end()) );
 
 template <typename R>
 inline constexpr bool HasEndMember
         < R
-        , require::Traits
+        , require::AllOf
                 < iterator::IsSentinelFor
                         < decltype( BeginFn(std::declval<R&>()) )
-                        , decltype( EndMemberHelper(std::declval<R&>()) )
+                        , decltype( end_member_helper(std::declval<R&>()) )
                         >
                 >
         > = true;
@@ -584,16 +585,16 @@ template <typename R, typename = void>
 inline constexpr bool HasAdlEnd = false;
 
 template <typename R>
-constexpr auto AdlEndHelper(R& r) -> decltype( DecayCopy(end(r)) );
+constexpr auto adl_end_helper(R& r) -> decltype( decay_copy(end(r)) );
 
 template <typename R>
 inline constexpr bool HasAdlEnd
         < R
-        , require::Traits
+        , require::AllOf
                 < IsClassOrEnum<std::remove_reference_t<R>>
                 , iterator::IsSentinelFor
                         < decltype( BeginFn(std::declval<R&>()) )
-                        , decltype( AdlEndHelper(std::declval<R&>()) )
+                        , decltype( adl_end_helper(std::declval<R&>()) )
                         >
                 >
         > = true;
@@ -606,26 +607,26 @@ inline constexpr bool IsBoundedArray<T[N]> = true;
 
 struct End {
     template <typename R>
-    static constexpr bool IsNoexcept() noexcept {
+    static constexpr bool is_noexcept() noexcept {
         if constexpr (IsBoundedArray<std::remove_reference_t<R>>) {
             return true;
         } else if constexpr (HasEndMember<R>) {
-            return noexcept(DecayCopy(std::declval<R&>().end()));
+            return noexcept(decay_copy(std::declval<R&>().end()));
         } else {
-            return noexcept(DecayCopy(end(std::declval<R&>())));
+            return noexcept(decay_copy(end(std::declval<R&>())));
         }
     }
 
 public:
     template
             < typename R
-            , typename = require::AnyOfTraits
+            , typename = require::AnyOf
                     < IsBoundedArray<std::remove_reference_t<R>>
                     , HasEndMember<R>
                     , HasAdlEnd<R>
                     >
             >
-    constexpr auto operator()(R&& r) const noexcept(IsNoexcept<R>()) {
+    constexpr auto operator()(R&& r) const noexcept(is_noexcept<R>()) {
         if constexpr (IsBoundedArray<std::remove_reference_t<R>>) {
             static_assert(std::is_lvalue_reference_v<R>,
                           "Since an array can't be a borrowed range it must be "
@@ -650,23 +651,23 @@ inline constexpr bool IsRange = false;
 namespace impl {
 
 template <typename R>
-constexpr auto RangeBegin(R& r) -> decltype( BeginFn(r) );
+constexpr auto range_begin(R& r) -> decltype( BeginFn(r) );
 
 template <typename R>
-constexpr auto RangeEnd(R& r) -> decltype( EndFn(r) );
+constexpr auto range_end(R& r) -> decltype( EndFn(r) );
 
 } // namespace impl
 
 template <typename R>
 inline constexpr bool IsRange
         < R
-        , require::Traits
+        , require::AllOf
                 < iterator::IsInputOrOutputIterator
-                        < decltype( impl::RangeBegin(std::declval<R&>()) )
+                        < decltype( impl::range_begin(std::declval<R&>()) )
                         >
                 , iterator::IsSentinelFor
-                        < decltype( impl::RangeBegin(std::declval<R&>()) )
-                        , decltype( impl::RangeEnd(std::declval<R&>()) )
+                        < decltype( impl::range_begin(std::declval<R&>()) )
+                        , decltype( impl::range_end(std::declval<R&>()) )
                         >
                 >
         > = true;
@@ -688,7 +689,7 @@ template
         < typename I
         , typename S
         , typename RangeTraits
-        , typename = require::Traits
+        , typename = require::AllOf
                 < RangeTraits::template input_or_output_iterator<I>
                 , RangeTraits::template sentinel_for<I, S>
                 >
@@ -697,7 +698,7 @@ class RangesAllTheWayDownTraits {
 private: // Type deduction methods
 
     template <typename RorV, typename... RWs>
-    static constexpr auto WrapRanges(std::tuple<RWs...> acc) noexcept {
+    static constexpr auto wrap_ranges(std::tuple<RWs...> acc) noexcept {
         if constexpr (!RangeTraits::template range<RorV>) {
             return acc;
         } else {
@@ -707,48 +708,48 @@ private: // Type deduction methods
             using Value = std::remove_reference_t<decltype( *std::declval<Iterator&>() )>;
             using RangeWrapper = Type<PseudoRange<Iterator, Sentinel>>;
 
-            return WrapRanges<Value>(std::tuple_cat(acc, std::tuple<RangeWrapper>{}));
+            return wrap_ranges<Value>(std::tuple_cat(acc, std::tuple<RangeWrapper>{}));
         }
     }
 
-    template <typename... RWs>
-    static constexpr auto UnwrapRanges(std::tuple<RWs...>) noexcept {
-        return Type<std::tuple<typename RWs::type...>>{};
-    }
-
-    static constexpr auto WrapRanges() noexcept {
+    static constexpr auto wrap_ranges() noexcept {
         using Value = std::remove_reference_t<decltype( *std::declval<I&>() )>;
         using RangeWrapper = Type<PseudoRange<I, S>>;
 
-        return WrapRanges<Value>(std::tuple<RangeWrapper>{});
+        return wrap_ranges<Value>(std::tuple<RangeWrapper>{});
+    }
+
+    template <typename... RWs>
+    static constexpr auto unwrap_ranges(std::tuple<RWs...>) noexcept {
+        return Type<std::tuple<typename RWs::type...>>{};
     }
 
 public: // TODO: section name
 
     // TODO: maybe extract two methods to one later
-    using Ranges = typename decltype( UnwrapRanges(WrapRanges()) )::type;
+    using Ranges = typename decltype( unwrap_ranges(wrap_ranges()) )::type;
 
     static constexpr std::size_t MaxDepth = std::tuple_size_v<Ranges> - 1;
 
 public: // Ranges getter/setter
 
     template <std::size_t Depth>
-    static constexpr auto& Get(Ranges& ranges) noexcept {
+    static constexpr auto& get(Ranges& ranges) noexcept {
         return std::get<Depth>(ranges);
     }
 
     template <std::size_t Depth>
-    static constexpr auto& Current(Ranges& ranges) noexcept {
-        return Get<Depth>(ranges).begin;
+    static constexpr auto& current(Ranges& ranges) noexcept {
+        return get<Depth>(ranges).begin;
     }
 
     template <std::size_t Depth>
-    static constexpr auto& End(Ranges& ranges) noexcept {
-        return Get<Depth>(ranges).end;
+    static constexpr auto& end(Ranges& ranges) noexcept {
+        return get<Depth>(ranges).end;
     }
 
-    static constexpr auto& Value(Ranges& ranges) noexcept {
-        return *Current<MaxDepth>(ranges);
+    static constexpr auto& value(Ranges& ranges) noexcept {
+        return *current<MaxDepth>(ranges);
     }
 
     // TODO: impl: NextUp, NextDown, and similar methods
@@ -756,20 +757,20 @@ public: // Ranges getter/setter
 private: // TODO: section name
 
     using DeepestIterator = std::remove_reference_t
-            < decltype( Current<MaxDepth>(std::declval<Ranges&>()) )
+            < decltype( current<MaxDepth>(std::declval<Ranges&>()) )
             >;
 
 public: // TODO: section name
         // TODO: replace all the `void` types to the proper types
 
-    using ValueType = typename std::iterator_traits<DeepestIterator>::value_type;
-    using DifferenceType = void;
-    using Reference = typename std::iterator_traits<DeepestIterator>::reference;
-    using Pointer = typename std::iterator_traits<DeepestIterator>::pointer;
-    using IteratorCategory = void;
+    using value_type = typename std::iterator_traits<DeepestIterator>::value_type;
+    using difference_type = void;
+    using reference = typename std::iterator_traits<DeepestIterator>::reference;
+    using pointer = typename std::iterator_traits<DeepestIterator>::pointer;
+    using iterator_category = void;
 
 #if defined(__cpp_concepts) && __cpp_concepts >= 201907L
-    using IteratorConcept = void;
+    using iterator_concept = void;
 #endif
 };
 
@@ -812,6 +813,6 @@ struct DefaultConceptRangeTraits {
 
 #endif // defined(__cpp_concepts) && __cpp_concepts >= 201907L
 
-} // namespace flatten_iterator
+} // namespace flatten
 
 #endif // FLATTEN_ITERATOR_TRAITS_H
