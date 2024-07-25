@@ -37,6 +37,37 @@
             , expected_type                                        \
             >)
 
+// Traits
+
+using RangeTraits =
+#if defined(__cpp_concepts) && __cpp_concepts >= 201907L
+        flatten::DefaultConceptRangeTraits
+#else
+        flatten::DefaultPreConceptRangeTraits;
+#endif
+
+template <typename R>
+using Traits = typename flatten::details
+        ::RangesAllTheWayDownTraits
+                < decltype( RangeTraits::begin(std::declval<R&>()) )
+                , decltype( RangeTraits::end(std::declval<R&>()) )
+                , RangeTraits
+                >;
+
+template <typename R>
+using IteratorTraits = typename std::iterator_traits
+        <decltype( RangeTraits::begin(std::declval<R&>()) )
+        >;
+
+// Empty structures as values
+
+struct A {};
+struct C {};
+struct R {};
+struct B {};
+struct F {};
+struct I {};
+
 // Containers with different kinds of iterators
 
 template <typename T>
@@ -163,22 +194,6 @@ public:
 };
 
 } // namespace adl
-
-
-using RangeTraits =
-#if defined(__cpp_concepts) && __cpp_concepts >= 201907L
-        flatten::DefaultConceptRangeTraits
-#else
-        flatten::DefaultPreConceptRangeTraits;
-#endif
-
-template <typename R>
-using Traits = typename flatten::details
-        ::RangesAllTheWayDownTraits
-                < decltype( RangeTraits::begin(std::declval<R&>()) )
-                , decltype( RangeTraits::end(std::declval<R&>()) )
-                , RangeTraits
-                >;
 
 
 TEST(RangeTraits, IsRange) {
@@ -511,226 +526,245 @@ TEST(RangeTraits, RangesAsTypeList) {
 
 
 TEST(RangeTraits, IteratorCategory) {
-    using C =
+    using C_tag =
 #if __cplusplus >= 202002L
             std::contiguous_iterator_tag
 #else
             std::random_access_iterator_tag
 #endif
     ;
-    using R = std::random_access_iterator_tag;
-    using B = std::bidirectional_iterator_tag;
-    using F = std::forward_iterator_tag;
-    using I = std::input_iterator_tag;
+    using R_tag = std::random_access_iterator_tag;
+    using B_tag = std::bidirectional_iterator_tag;
+    using F_tag = std::forward_iterator_tag;
+    using I_tag = std::input_iterator_tag;
 
-    TEST_NESTED_TYPE(iterator_category, C, ContinuousC, int);
-    TEST_NESTED_TYPE(iterator_category, C, Array2, int);
-    TEST_NESTED_TYPE(iterator_category, R, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, R, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, B, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ForwardC, int);
-    TEST_NESTED_TYPE(iterator_category, I, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, C_tag, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, C_tag, Array2, int);
+    TEST_NESTED_TYPE(iterator_category, R_tag, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, R_tag, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, int);
 
     // InputC, _
-    TEST_NESTED_TYPE(iterator_category, I, InputC, InputC, int);
-    TEST_NESTED_TYPE(iterator_category, I, InputC, ForwardC, int);
-    TEST_NESTED_TYPE(iterator_category, I, InputC, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, I, InputC, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, I, InputC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, ContinuousC, int);
 
     // ForwardC, _
-    TEST_NESTED_TYPE(iterator_category, I, ForwardC, InputC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ForwardC, ForwardC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ForwardC, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ForwardC, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ForwardC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, ForwardC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ForwardC, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ForwardC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ForwardC, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ForwardC, ContinuousC, int);
 
     // BidirectC, _
-    TEST_NESTED_TYPE(iterator_category, I, BidirectC, InputC, int);
-    TEST_NESTED_TYPE(iterator_category, F, BidirectC, ForwardC, int);
-    TEST_NESTED_TYPE(iterator_category, B, BidirectC, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, B, BidirectC, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, B, BidirectC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, BidirectC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, BidirectC, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, BidirectC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, BidirectC, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, BidirectC, ContinuousC, int);
 
     // RandomAccessC, _
-    TEST_NESTED_TYPE(iterator_category, I, RandomAccessC, InputC, int);
-    TEST_NESTED_TYPE(iterator_category, F, RandomAccessC, ForwardC, int);
-    TEST_NESTED_TYPE(iterator_category, B, RandomAccessC, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, B, RandomAccessC, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, B, RandomAccessC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, RandomAccessC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, RandomAccessC, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, RandomAccessC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, RandomAccessC, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, RandomAccessC, ContinuousC, int);
 
     // ContinuousC, _
-    TEST_NESTED_TYPE(iterator_category, I, ContinuousC, InputC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ContinuousC, ForwardC, int);
-    TEST_NESTED_TYPE(iterator_category, B, ContinuousC, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, B, ContinuousC, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, B, ContinuousC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, ContinuousC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ContinuousC, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, ContinuousC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, ContinuousC, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, ContinuousC, ContinuousC, int);
 
     // ContinuousC, _, ContinuousC
-    TEST_NESTED_TYPE(iterator_category, I, ContinuousC, InputC, ContinuousC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ContinuousC, ForwardC, ContinuousC, int);
-    TEST_NESTED_TYPE(iterator_category, B, ContinuousC, BidirectC, ContinuousC, int);
-    TEST_NESTED_TYPE(iterator_category, B, ContinuousC, RandomAccessC, ContinuousC, int);
-    TEST_NESTED_TYPE(iterator_category, B, ContinuousC, ContinuousC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, ContinuousC, InputC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ContinuousC, ForwardC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, ContinuousC, BidirectC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, ContinuousC, RandomAccessC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, ContinuousC, ContinuousC, ContinuousC, int);
 
     // RandomAccessC, _, RandomAccessC
-    TEST_NESTED_TYPE(iterator_category, I, RandomAccessC, InputC, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, F, RandomAccessC, ForwardC, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, B, RandomAccessC, BidirectC, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, B, RandomAccessC, RandomAccessC, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, B, RandomAccessC, ContinuousC, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, RandomAccessC, InputC, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, RandomAccessC, ForwardC, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, RandomAccessC, BidirectC, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, RandomAccessC, RandomAccessC, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, RandomAccessC, ContinuousC, RandomAccessC, int);
 
     // BidirectC, _, BidirectC
-    TEST_NESTED_TYPE(iterator_category, I, BidirectC, InputC, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, F, BidirectC, ForwardC, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, B, BidirectC, BidirectC, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, B, BidirectC, RandomAccessC, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, B, BidirectC, ContinuousC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, BidirectC, InputC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, BidirectC, ForwardC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, BidirectC, BidirectC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, BidirectC, RandomAccessC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, BidirectC, ContinuousC, BidirectC, int);
 
     // ForwardC, _, ForwardC
-    TEST_NESTED_TYPE(iterator_category, I, ForwardC, InputC, ForwardC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ForwardC, ForwardC, ForwardC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ForwardC, BidirectC, ForwardC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ForwardC, RandomAccessC, ForwardC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ForwardC, ContinuousC, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, ForwardC, InputC, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ForwardC, ForwardC, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ForwardC, BidirectC, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ForwardC, RandomAccessC, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ForwardC, ContinuousC, ForwardC, int);
 
     // InputC, _, InputC
-    TEST_NESTED_TYPE(iterator_category, I, InputC, InputC, InputC, int);
-    TEST_NESTED_TYPE(iterator_category, I, InputC, ForwardC, InputC, int);
-    TEST_NESTED_TYPE(iterator_category, I, InputC, BidirectC, InputC, int);
-    TEST_NESTED_TYPE(iterator_category, I, InputC, RandomAccessC, InputC, int);
-    TEST_NESTED_TYPE(iterator_category, I, InputC, ContinuousC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, InputC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, ForwardC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, BidirectC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, RandomAccessC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, ContinuousC, InputC, int);
 
     // InputC <-> ForwardC <-> BidirectC <-> RandomAccessC <-> ContinuousC
-    TEST_NESTED_TYPE(iterator_category, I, InputC, ForwardC, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, F, ForwardC, BidirectC, RandomAccessC, int);
-    TEST_NESTED_TYPE(iterator_category, B, BidirectC, RandomAccessC, ContinuousC, int);
-    TEST_NESTED_TYPE(iterator_category, B, ContinuousC, RandomAccessC, BidirectC, int);
-    TEST_NESTED_TYPE(iterator_category, F, RandomAccessC, BidirectC, ForwardC, int);
-    TEST_NESTED_TYPE(iterator_category, I, BidirectC, ForwardC, InputC, int);
-    TEST_NESTED_TYPE(iterator_category, I, InputC, ForwardC, BidirectC, RandomAccessC, ContinuousC, int);
-    TEST_NESTED_TYPE(iterator_category, I, ContinuousC, RandomAccessC, BidirectC, ForwardC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, ForwardC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, ForwardC, BidirectC, RandomAccessC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, BidirectC, RandomAccessC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, B_tag, ContinuousC, RandomAccessC, BidirectC, int);
+    TEST_NESTED_TYPE(iterator_category, F_tag, RandomAccessC, BidirectC, ForwardC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, BidirectC, ForwardC, InputC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, InputC, ForwardC, BidirectC, RandomAccessC, ContinuousC, int);
+    TEST_NESTED_TYPE(iterator_category, I_tag, ContinuousC, RandomAccessC, BidirectC, ForwardC, InputC, int);
 }
 
+
+template <typename V>
+using A_val = typename IteratorTraits<Array2<V>>::value_type;
+
+template <typename V>
+using C_val = typename IteratorTraits<ContinuousC<V>>::value_type;
+
+template <typename V>
+using R_val = typename IteratorTraits<RandomAccessC<V>>::value_type;
+
+template <typename V>
+using B_val = typename IteratorTraits<BidirectC<V>>::value_type;
+
+template <typename V>
+using F_val = typename IteratorTraits<ForwardC<V>>::value_type;
+
+template <typename V>
+using I_val = typename IteratorTraits<InputC<V>>::value_type;
 
 TEST(RangeTraits, ValueType) {
-    TEST_NESTED_TYPE(value_type, int, Array2, int);
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, int);
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, int);
-    TEST_NESTED_TYPE(value_type, int, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, ForwardC, int);
-    TEST_NESTED_TYPE(value_type, int, InputC, int);
+    TEST_NESTED_TYPE(value_type, A_val<A>, Array2, A);
+    TEST_NESTED_TYPE(value_type, C_val<C>, ContinuousC, C);
+    TEST_NESTED_TYPE(value_type, R_val<R>, RandomAccessC, R);
+    TEST_NESTED_TYPE(value_type, B_val<B>, BidirectC, B);
+    TEST_NESTED_TYPE(value_type, F_val<F>, ForwardC, F);
+    TEST_NESTED_TYPE(value_type, I_val<I>, InputC, I);
 
-    TEST_NESTED_TYPE(value_type, bool, std::vector, bool);
+    using Bool_val = IteratorTraits<std::vector<bool>>::value_type;
+
+    TEST_NESTED_TYPE(value_type, Bool_val, std::vector, bool);
 
     // InputC, _
-    TEST_NESTED_TYPE(value_type, int, InputC, InputC, int);
-    TEST_NESTED_TYPE(value_type, int, InputC, ForwardC, int);
-    TEST_NESTED_TYPE(value_type, int, InputC, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, InputC, RandomAccessC, int);
-    TEST_NESTED_TYPE(value_type, int, InputC, ContinuousC, int);
+    TEST_NESTED_TYPE(value_type, I_val<I>, InputC, InputC, I);
+    TEST_NESTED_TYPE(value_type, F_val<F>, InputC, ForwardC, F);
+    TEST_NESTED_TYPE(value_type, B_val<B>, InputC, BidirectC, B);
+    TEST_NESTED_TYPE(value_type, R_val<R>, InputC, RandomAccessC, R);
+    TEST_NESTED_TYPE(value_type, C_val<C>, InputC, ContinuousC, C);
 
     // ForwardC, _
-    TEST_NESTED_TYPE(value_type, int, ForwardC, InputC, int);
-    TEST_NESTED_TYPE(value_type, int, ForwardC, ForwardC, int);
-    TEST_NESTED_TYPE(value_type, int, ForwardC, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, ForwardC, RandomAccessC, int);
-    TEST_NESTED_TYPE(value_type, int, ForwardC, ContinuousC, int);
+    TEST_NESTED_TYPE(value_type, I_val<I>, ForwardC, InputC, I);
+    TEST_NESTED_TYPE(value_type, F_val<F>, ForwardC, ForwardC, F);
+    TEST_NESTED_TYPE(value_type, B_val<B>, ForwardC, BidirectC, B);
+    TEST_NESTED_TYPE(value_type, R_val<R>, ForwardC, RandomAccessC, R);
+    TEST_NESTED_TYPE(value_type, C_val<C>, ForwardC, ContinuousC, C);
 
     // BidirectC, _
-    TEST_NESTED_TYPE(value_type, int, BidirectC, InputC, int);
-    TEST_NESTED_TYPE(value_type, int, BidirectC, ForwardC, int);
-    TEST_NESTED_TYPE(value_type, int, BidirectC, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, BidirectC, RandomAccessC, int);
-    TEST_NESTED_TYPE(value_type, int, BidirectC, ContinuousC, int);
+    TEST_NESTED_TYPE(value_type, I_val<I>, BidirectC, InputC, I);
+    TEST_NESTED_TYPE(value_type, F_val<F>, BidirectC, ForwardC, F);
+    TEST_NESTED_TYPE(value_type, B_val<B>, BidirectC, BidirectC, B);
+    TEST_NESTED_TYPE(value_type, R_val<R>, BidirectC, RandomAccessC, R);
+    TEST_NESTED_TYPE(value_type, C_val<C>, BidirectC, ContinuousC, C);
 
     // RandomAccessC, _
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, InputC, int);
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, ForwardC, int);
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, RandomAccessC, int);
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, ContinuousC, int);
+    TEST_NESTED_TYPE(value_type, I_val<I>, RandomAccessC, InputC, I);
+    TEST_NESTED_TYPE(value_type, F_val<F>, RandomAccessC, ForwardC, F);
+    TEST_NESTED_TYPE(value_type, B_val<B>, RandomAccessC, BidirectC, B);
+    TEST_NESTED_TYPE(value_type, R_val<R>, RandomAccessC, RandomAccessC, R);
+    TEST_NESTED_TYPE(value_type, C_val<C>, RandomAccessC, ContinuousC, C);
 
     // ContinuousC, _
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, InputC, int);
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, ForwardC, int);
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, RandomAccessC, int);
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, ContinuousC, int);
+    TEST_NESTED_TYPE(value_type, I_val<I>, ContinuousC, InputC, I);
+    TEST_NESTED_TYPE(value_type, F_val<F>, ContinuousC, ForwardC, F);
+    TEST_NESTED_TYPE(value_type, B_val<B>, ContinuousC, BidirectC, B);
+    TEST_NESTED_TYPE(value_type, R_val<R>, ContinuousC, RandomAccessC, R);
+    TEST_NESTED_TYPE(value_type, C_val<C>, ContinuousC, ContinuousC, C);
 
     // ContinuousC, _, ContinuousC
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, InputC, ContinuousC, int);
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, ForwardC, ContinuousC, int);
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, BidirectC, ContinuousC, int);
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, RandomAccessC, ContinuousC, int);
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, ContinuousC, ContinuousC, int);
+    TEST_NESTED_TYPE(value_type, C_val<I>, ContinuousC, InputC, ContinuousC, I);
+    TEST_NESTED_TYPE(value_type, C_val<F>, ContinuousC, ForwardC, ContinuousC, F);
+    TEST_NESTED_TYPE(value_type, C_val<B>, ContinuousC, BidirectC, ContinuousC, B);
+    TEST_NESTED_TYPE(value_type, C_val<R>, ContinuousC, RandomAccessC, ContinuousC, R);
+    TEST_NESTED_TYPE(value_type, C_val<C>, ContinuousC, ContinuousC, ContinuousC, C);
 
     // RandomAccessC, _, RandomAccessC
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, InputC, RandomAccessC, int);
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, ForwardC, RandomAccessC, int);
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, BidirectC, RandomAccessC, int);
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, RandomAccessC, RandomAccessC, int);
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, ContinuousC, RandomAccessC, int);
+    TEST_NESTED_TYPE(value_type, R_val<I>, RandomAccessC, InputC, RandomAccessC, I);
+    TEST_NESTED_TYPE(value_type, R_val<F>, RandomAccessC, ForwardC, RandomAccessC, F);
+    TEST_NESTED_TYPE(value_type, R_val<B>, RandomAccessC, BidirectC, RandomAccessC, B);
+    TEST_NESTED_TYPE(value_type, R_val<R>, RandomAccessC, RandomAccessC, RandomAccessC, R);
+    TEST_NESTED_TYPE(value_type, R_val<C>, RandomAccessC, ContinuousC, RandomAccessC, C);
 
     // BidirectC, _, BidirectC
-    TEST_NESTED_TYPE(value_type, int, BidirectC, InputC, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, BidirectC, ForwardC, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, BidirectC, BidirectC, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, BidirectC, RandomAccessC, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, BidirectC, ContinuousC, BidirectC, int);
+    TEST_NESTED_TYPE(value_type, B_val<I>, BidirectC, InputC, BidirectC, I);
+    TEST_NESTED_TYPE(value_type, B_val<F>, BidirectC, ForwardC, BidirectC, F);
+    TEST_NESTED_TYPE(value_type, B_val<B>, BidirectC, BidirectC, BidirectC, B);
+    TEST_NESTED_TYPE(value_type, B_val<R>, BidirectC, RandomAccessC, BidirectC, R);
+    TEST_NESTED_TYPE(value_type, B_val<C>, BidirectC, ContinuousC, BidirectC, C);
 
     // ForwardC, _, ForwardC
-    TEST_NESTED_TYPE(value_type, int, ForwardC, InputC, ForwardC, int);
-    TEST_NESTED_TYPE(value_type, int, ForwardC, ForwardC, ForwardC, int);
-    TEST_NESTED_TYPE(value_type, int, ForwardC, BidirectC, ForwardC, int);
-    TEST_NESTED_TYPE(value_type, int, ForwardC, RandomAccessC, ForwardC, int);
-    TEST_NESTED_TYPE(value_type, int, ForwardC, ContinuousC, ForwardC, int);
+    TEST_NESTED_TYPE(value_type, F_val<I>, ForwardC, InputC, ForwardC, I);
+    TEST_NESTED_TYPE(value_type, F_val<F>, ForwardC, ForwardC, ForwardC, F);
+    TEST_NESTED_TYPE(value_type, F_val<B>, ForwardC, BidirectC, ForwardC, B);
+    TEST_NESTED_TYPE(value_type, F_val<R>, ForwardC, RandomAccessC, ForwardC, R);
+    TEST_NESTED_TYPE(value_type, F_val<C>, ForwardC, ContinuousC, ForwardC, C);
 
     // InputC, _, InputC
-    TEST_NESTED_TYPE(value_type, int, InputC, InputC, InputC, int);
-    TEST_NESTED_TYPE(value_type, int, InputC, ForwardC, InputC, int);
-    TEST_NESTED_TYPE(value_type, int, InputC, BidirectC, InputC, int);
-    TEST_NESTED_TYPE(value_type, int, InputC, RandomAccessC, InputC, int);
-    TEST_NESTED_TYPE(value_type, int, InputC, ContinuousC, InputC, int);
+    TEST_NESTED_TYPE(value_type, I_val<I>, InputC, InputC, InputC, I);
+    TEST_NESTED_TYPE(value_type, I_val<F>, InputC, ForwardC, InputC, F);
+    TEST_NESTED_TYPE(value_type, I_val<B>, InputC, BidirectC, InputC, B);
+    TEST_NESTED_TYPE(value_type, I_val<R>, InputC, RandomAccessC, InputC, R);
+    TEST_NESTED_TYPE(value_type, I_val<C>, InputC, ContinuousC, InputC, C);
 
     // InputC <-> ForwardC <-> BidirectC <-> RandomAccessC <-> ContinuousC
-    TEST_NESTED_TYPE(value_type, int, InputC, ForwardC, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, ForwardC, BidirectC, RandomAccessC, int);
-    TEST_NESTED_TYPE(value_type, int, BidirectC, RandomAccessC, ContinuousC, int);
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, RandomAccessC, BidirectC, int);
-    TEST_NESTED_TYPE(value_type, int, RandomAccessC, BidirectC, ForwardC, int);
-    TEST_NESTED_TYPE(value_type, int, BidirectC, ForwardC, InputC, int);
-    TEST_NESTED_TYPE(value_type, int, InputC, ForwardC, BidirectC, RandomAccessC, ContinuousC, int);
-    TEST_NESTED_TYPE(value_type, int, ContinuousC, RandomAccessC, BidirectC, ForwardC, InputC, int);
+    TEST_NESTED_TYPE(value_type, B_val<I>, InputC, ForwardC, BidirectC, I);
+    TEST_NESTED_TYPE(value_type, R_val<F>, ForwardC, BidirectC, RandomAccessC, F);
+    TEST_NESTED_TYPE(value_type, C_val<B>, BidirectC, RandomAccessC, ContinuousC, B);
+    TEST_NESTED_TYPE(value_type, B_val<C>, ContinuousC, RandomAccessC, BidirectC, C);
+    TEST_NESTED_TYPE(value_type, F_val<R>, RandomAccessC, BidirectC, ForwardC, R);
+    TEST_NESTED_TYPE(value_type, I_val<B>, BidirectC, ForwardC, InputC, B);
+    TEST_NESTED_TYPE(value_type, C_val<I>, InputC, ForwardC, BidirectC, RandomAccessC, ContinuousC, I);
+    TEST_NESTED_TYPE(value_type, I_val<C>, ContinuousC, RandomAccessC, BidirectC, ForwardC, InputC, C);
 }
 
 
-TEST(RangeTraits, Reference) {
-    using A_ref = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<Array2<int>&>()) )
-            >::reference;
-    using C_ref = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<ContinuousC<int>&>()) )
-            >::reference;
-    using R_ref = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<RandomAccessC<int>&>()) )
-            >::reference;
-    using B_ref = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<BidirectC<int>&>()) )
-            >::reference;
-    using F_ref = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<ForwardC<int>&>()) )
-            >::reference;
-    using I_ref = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<InputC<int>&>()) )
-            >::reference;
+template <typename V>
+using A_ref = typename IteratorTraits<Array2<V>>::reference;
 
-    TEST_NESTED_TYPE(reference, A_ref, Array2, int);
-    TEST_NESTED_TYPE(reference, C_ref, ContinuousC, int);
-    TEST_NESTED_TYPE(reference, R_ref, RandomAccessC, int);
-    TEST_NESTED_TYPE(reference, B_ref, BidirectC, int);
-    TEST_NESTED_TYPE(reference, F_ref, ForwardC, int);
-    TEST_NESTED_TYPE(reference, I_ref, InputC, int);
+template <typename V>
+using C_ref = typename IteratorTraits<ContinuousC<V>>::reference;
+
+template <typename V>
+using R_ref = typename IteratorTraits<RandomAccessC<V>>::reference;
+
+template <typename V>
+using B_ref = typename IteratorTraits<BidirectC<V>>::reference;
+
+template <typename V>
+using F_ref = typename IteratorTraits<ForwardC<V>>::reference;
+
+template <typename V>
+using I_ref = typename IteratorTraits<InputC<V>>::reference;
+
+TEST(RangeTraits, Reference) {
+    TEST_NESTED_TYPE(reference, A_ref<A>, Array2, A);
+    TEST_NESTED_TYPE(reference, C_ref<C>, ContinuousC, C);
+    TEST_NESTED_TYPE(reference, R_ref<R>, RandomAccessC, R);
+    TEST_NESTED_TYPE(reference, B_ref<B>, BidirectC, B);
+    TEST_NESTED_TYPE(reference, F_ref<F>, ForwardC, F);
+    TEST_NESTED_TYPE(reference, I_ref<I>, InputC, I);
 
     using VecBool_ref = typename std::iterator_traits
             < decltype( RangeTraits::begin(std::declval<std::vector<bool>&>()) )
@@ -739,106 +773,94 @@ TEST(RangeTraits, Reference) {
     TEST_NESTED_TYPE(reference, VecBool_ref, std::vector, bool);
 
     // InputC, _
-    TEST_NESTED_TYPE(reference, I_ref, InputC, InputC, int);
-    TEST_NESTED_TYPE(reference, F_ref, InputC, ForwardC, int);
-    TEST_NESTED_TYPE(reference, B_ref, InputC, BidirectC, int);
-    TEST_NESTED_TYPE(reference, R_ref, InputC, RandomAccessC, int);
-    TEST_NESTED_TYPE(reference, C_ref, InputC, ContinuousC, int);
+    TEST_NESTED_TYPE(reference, I_ref<I>, InputC, InputC, I);
+    TEST_NESTED_TYPE(reference, F_ref<F>, InputC, ForwardC, F);
+    TEST_NESTED_TYPE(reference, B_ref<B>, InputC, BidirectC, B);
+    TEST_NESTED_TYPE(reference, R_ref<R>, InputC, RandomAccessC, R);
+    TEST_NESTED_TYPE(reference, C_ref<C>, InputC, ContinuousC, C);
 
     // ForwardC, _
-    TEST_NESTED_TYPE(reference, I_ref, ForwardC, InputC, int);
-    TEST_NESTED_TYPE(reference, F_ref, ForwardC, ForwardC, int);
-    TEST_NESTED_TYPE(reference, B_ref, ForwardC, BidirectC, int);
-    TEST_NESTED_TYPE(reference, R_ref, ForwardC, RandomAccessC, int);
-    TEST_NESTED_TYPE(reference, C_ref, ForwardC, ContinuousC, int);
+    TEST_NESTED_TYPE(reference, I_ref<I>, ForwardC, InputC, I);
+    TEST_NESTED_TYPE(reference, F_ref<F>, ForwardC, ForwardC, F);
+    TEST_NESTED_TYPE(reference, B_ref<B>, ForwardC, BidirectC, B);
+    TEST_NESTED_TYPE(reference, R_ref<R>, ForwardC, RandomAccessC, R);
+    TEST_NESTED_TYPE(reference, C_ref<C>, ForwardC, ContinuousC, C);
 
     // BidirectC, _
-    TEST_NESTED_TYPE(reference, I_ref, BidirectC, InputC, int);
-    TEST_NESTED_TYPE(reference, F_ref, BidirectC, ForwardC, int);
-    TEST_NESTED_TYPE(reference, B_ref, BidirectC, BidirectC, int);
-    TEST_NESTED_TYPE(reference, R_ref, BidirectC, RandomAccessC, int);
-    TEST_NESTED_TYPE(reference, C_ref, BidirectC, ContinuousC, int);
+    TEST_NESTED_TYPE(reference, I_ref<I>, BidirectC, InputC, I);
+    TEST_NESTED_TYPE(reference, F_ref<F>, BidirectC, ForwardC, F);
+    TEST_NESTED_TYPE(reference, B_ref<B>, BidirectC, BidirectC, B);
+    TEST_NESTED_TYPE(reference, R_ref<R>, BidirectC, RandomAccessC, R);
+    TEST_NESTED_TYPE(reference, C_ref<C>, BidirectC, ContinuousC, C);
 
     // RandomAccessC, _
-    TEST_NESTED_TYPE(reference, I_ref, RandomAccessC, InputC, int);
-    TEST_NESTED_TYPE(reference, F_ref, RandomAccessC, ForwardC, int);
-    TEST_NESTED_TYPE(reference, B_ref, RandomAccessC, BidirectC, int);
-    TEST_NESTED_TYPE(reference, R_ref, RandomAccessC, RandomAccessC, int);
-    TEST_NESTED_TYPE(reference, C_ref, RandomAccessC, ContinuousC, int);
+    TEST_NESTED_TYPE(reference, I_ref<I>, RandomAccessC, InputC, I);
+    TEST_NESTED_TYPE(reference, F_ref<F>, RandomAccessC, ForwardC, F);
+    TEST_NESTED_TYPE(reference, B_ref<B>, RandomAccessC, BidirectC, B);
+    TEST_NESTED_TYPE(reference, R_ref<R>, RandomAccessC, RandomAccessC, R);
+    TEST_NESTED_TYPE(reference, C_ref<C>, RandomAccessC, ContinuousC, C);
 
     // ContinuousC, _
-    TEST_NESTED_TYPE(reference, I_ref, ContinuousC, InputC, int);
-    TEST_NESTED_TYPE(reference, F_ref, ContinuousC, ForwardC, int);
-    TEST_NESTED_TYPE(reference, B_ref, ContinuousC, BidirectC, int);
-    TEST_NESTED_TYPE(reference, R_ref, ContinuousC, RandomAccessC, int);
-    TEST_NESTED_TYPE(reference, C_ref, ContinuousC, ContinuousC, int);
+    TEST_NESTED_TYPE(reference, I_ref<I>, ContinuousC, InputC, I);
+    TEST_NESTED_TYPE(reference, F_ref<F>, ContinuousC, ForwardC, F);
+    TEST_NESTED_TYPE(reference, B_ref<B>, ContinuousC, BidirectC, B);
+    TEST_NESTED_TYPE(reference, R_ref<R>, ContinuousC, RandomAccessC, R);
+    TEST_NESTED_TYPE(reference, C_ref<C>, ContinuousC, ContinuousC, C);
 
     // ContinuousC, _, ContinuousC
-    TEST_NESTED_TYPE(reference, C_ref, ContinuousC, InputC, ContinuousC, int);
-    TEST_NESTED_TYPE(reference, C_ref, ContinuousC, ForwardC, ContinuousC, int);
-    TEST_NESTED_TYPE(reference, C_ref, ContinuousC, BidirectC, ContinuousC, int);
-    TEST_NESTED_TYPE(reference, C_ref, ContinuousC, RandomAccessC, ContinuousC, int);
-    TEST_NESTED_TYPE(reference, C_ref, ContinuousC, ContinuousC, ContinuousC, int);
+    TEST_NESTED_TYPE(reference, C_ref<I>, ContinuousC, InputC, ContinuousC, I);
+    TEST_NESTED_TYPE(reference, C_ref<F>, ContinuousC, ForwardC, ContinuousC, F);
+    TEST_NESTED_TYPE(reference, C_ref<B>, ContinuousC, BidirectC, ContinuousC, B);
+    TEST_NESTED_TYPE(reference, C_ref<R>, ContinuousC, RandomAccessC, ContinuousC, R);
+    TEST_NESTED_TYPE(reference, C_ref<C>, ContinuousC, ContinuousC, ContinuousC, C);
 
     // RandomAccessC, _, RandomAccessC
-    TEST_NESTED_TYPE(reference, R_ref, RandomAccessC, InputC, RandomAccessC, int);
-    TEST_NESTED_TYPE(reference, R_ref, RandomAccessC, ForwardC, RandomAccessC, int);
-    TEST_NESTED_TYPE(reference, R_ref, RandomAccessC, BidirectC, RandomAccessC, int);
-    TEST_NESTED_TYPE(reference, R_ref, RandomAccessC, RandomAccessC, RandomAccessC, int);
-    TEST_NESTED_TYPE(reference, R_ref, RandomAccessC, ContinuousC, RandomAccessC, int);
+    TEST_NESTED_TYPE(reference, R_ref<I>, RandomAccessC, InputC, RandomAccessC, I);
+    TEST_NESTED_TYPE(reference, R_ref<F>, RandomAccessC, ForwardC, RandomAccessC, F);
+    TEST_NESTED_TYPE(reference, R_ref<B>, RandomAccessC, BidirectC, RandomAccessC, B);
+    TEST_NESTED_TYPE(reference, R_ref<R>, RandomAccessC, RandomAccessC, RandomAccessC, R);
+    TEST_NESTED_TYPE(reference, R_ref<C>, RandomAccessC, ContinuousC, RandomAccessC, C);
 
     // BidirectC, _, BidirectC
-    TEST_NESTED_TYPE(reference, B_ref, BidirectC, InputC, BidirectC, int);
-    TEST_NESTED_TYPE(reference, B_ref, BidirectC, ForwardC, BidirectC, int);
-    TEST_NESTED_TYPE(reference, B_ref, BidirectC, BidirectC, BidirectC, int);
-    TEST_NESTED_TYPE(reference, B_ref, BidirectC, RandomAccessC, BidirectC, int);
-    TEST_NESTED_TYPE(reference, B_ref, BidirectC, ContinuousC, BidirectC, int);
+    TEST_NESTED_TYPE(reference, B_ref<I>, BidirectC, InputC, BidirectC, I);
+    TEST_NESTED_TYPE(reference, B_ref<F>, BidirectC, ForwardC, BidirectC, F);
+    TEST_NESTED_TYPE(reference, B_ref<B>, BidirectC, BidirectC, BidirectC, B);
+    TEST_NESTED_TYPE(reference, B_ref<R>, BidirectC, RandomAccessC, BidirectC, R);
+    TEST_NESTED_TYPE(reference, B_ref<C>, BidirectC, ContinuousC, BidirectC, C);
 
     // ForwardC, _, ForwardC
-    TEST_NESTED_TYPE(reference, F_ref, ForwardC, InputC, ForwardC, int);
-    TEST_NESTED_TYPE(reference, F_ref, ForwardC, ForwardC, ForwardC, int);
-    TEST_NESTED_TYPE(reference, F_ref, ForwardC, BidirectC, ForwardC, int);
-    TEST_NESTED_TYPE(reference, F_ref, ForwardC, RandomAccessC, ForwardC, int);
-    TEST_NESTED_TYPE(reference, F_ref, ForwardC, ContinuousC, ForwardC, int);
+    TEST_NESTED_TYPE(reference, F_ref<I>, ForwardC, InputC, ForwardC, I);
+    TEST_NESTED_TYPE(reference, F_ref<F>, ForwardC, ForwardC, ForwardC, F);
+    TEST_NESTED_TYPE(reference, F_ref<B>, ForwardC, BidirectC, ForwardC, B);
+    TEST_NESTED_TYPE(reference, F_ref<R>, ForwardC, RandomAccessC, ForwardC, R);
+    TEST_NESTED_TYPE(reference, F_ref<C>, ForwardC, ContinuousC, ForwardC, C);
 
     // InputC, _, InputC
-    TEST_NESTED_TYPE(reference, I_ref, InputC, InputC, InputC, int);
-    TEST_NESTED_TYPE(reference, I_ref, InputC, ForwardC, InputC, int);
-    TEST_NESTED_TYPE(reference, I_ref, InputC, BidirectC, InputC, int);
-    TEST_NESTED_TYPE(reference, I_ref, InputC, RandomAccessC, InputC, int);
-    TEST_NESTED_TYPE(reference, I_ref, InputC, ContinuousC, InputC, int);
+    TEST_NESTED_TYPE(reference, I_ref<I>, InputC, InputC, InputC, I);
+    TEST_NESTED_TYPE(reference, I_ref<F>, InputC, ForwardC, InputC, F);
+    TEST_NESTED_TYPE(reference, I_ref<B>, InputC, BidirectC, InputC, B);
+    TEST_NESTED_TYPE(reference, I_ref<R>, InputC, RandomAccessC, InputC, R);
+    TEST_NESTED_TYPE(reference, I_ref<C>, InputC, ContinuousC, InputC, C);
 
     // InputC <-> ForwardC <-> BidirectC <-> RandomAccessC <-> ContinuousC
-    TEST_NESTED_TYPE(reference, B_ref, InputC, ForwardC, BidirectC, int);
-    TEST_NESTED_TYPE(reference, R_ref, ForwardC, BidirectC, RandomAccessC, int);
-    TEST_NESTED_TYPE(reference, C_ref, BidirectC, RandomAccessC, ContinuousC, int);
-    TEST_NESTED_TYPE(reference, B_ref, ContinuousC, RandomAccessC, BidirectC, int);
-    TEST_NESTED_TYPE(reference, F_ref, RandomAccessC, BidirectC, ForwardC, int);
-    TEST_NESTED_TYPE(reference, I_ref, BidirectC, ForwardC, InputC, int);
-    TEST_NESTED_TYPE(reference, C_ref, InputC, ForwardC, BidirectC, RandomAccessC, ContinuousC, int);
-    TEST_NESTED_TYPE(reference, I_ref, ContinuousC, RandomAccessC, BidirectC, ForwardC, InputC, int);
+    TEST_NESTED_TYPE(reference, B_ref<I>, InputC, ForwardC, BidirectC, I);
+    TEST_NESTED_TYPE(reference, R_ref<F>, ForwardC, BidirectC, RandomAccessC, F);
+    TEST_NESTED_TYPE(reference, C_ref<B>, BidirectC, RandomAccessC, ContinuousC, B);
+    TEST_NESTED_TYPE(reference, B_ref<C>, ContinuousC, RandomAccessC, BidirectC, C);
+    TEST_NESTED_TYPE(reference, F_ref<R>, RandomAccessC, BidirectC, ForwardC, R);
+    TEST_NESTED_TYPE(reference, I_ref<B>, BidirectC, ForwardC, InputC, B);
+    TEST_NESTED_TYPE(reference, C_ref<I>, InputC, ForwardC, BidirectC, RandomAccessC, ContinuousC, I);
+    TEST_NESTED_TYPE(reference, I_ref<C>, ContinuousC, RandomAccessC, BidirectC, ForwardC, InputC, C);
 }
 
 
 TEST(RangeTraits, Pointer) {
-    using A_ptr = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<Array2<int>&>()) )
-            >::pointer;
-    using C_ptr = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<ContinuousC<int>&>()) )
-            >::pointer;
-    using R_ptr = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<RandomAccessC<int>&>()) )
-            >::pointer;
-    using B_ptr = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<BidirectC<int>&>()) )
-            >::pointer;
-    using F_ptr = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<ForwardC<int>&>()) )
-            >::pointer;
-    using I_ptr = typename std::iterator_traits
-            < decltype( RangeTraits::begin(std::declval<InputC<int>&>()) )
-            >::pointer;
+    using A_ptr = IteratorTraits<Array2<int>>::pointer;
+    using C_ptr = IteratorTraits<ContinuousC<int>>::pointer;
+    using R_ptr = IteratorTraits<RandomAccessC<int>>::pointer;
+    using B_ptr = IteratorTraits<BidirectC<int>>::pointer;
+    using F_ptr = IteratorTraits<ForwardC<int>>::pointer;
+    using I_ptr = IteratorTraits<InputC<int>>::pointer;
 
     TEST_NESTED_TYPE(pointer, A_ptr, Array2, int);
     TEST_NESTED_TYPE(pointer, C_ptr, ContinuousC, int);
@@ -933,5 +955,110 @@ TEST(RangeTraits, Pointer) {
     TEST_NESTED_TYPE(pointer, C_ptr, InputC, ForwardC, BidirectC, RandomAccessC, ContinuousC, int);
     TEST_NESTED_TYPE(pointer, I_ptr, ContinuousC, RandomAccessC, BidirectC, ForwardC, InputC, int);
 }
+
+
+TEST(RangeTraits, DifferenceType) {
+    using A_diff_t = IteratorTraits<Array2<int>>::difference_type;
+    using C_diff_t = IteratorTraits<ContinuousC<int>>::difference_type;
+    using R_diff_t = IteratorTraits<RandomAccessC<int>>::difference_type;
+    using B_diff_t = IteratorTraits<BidirectC<int>>::difference_type;
+    using F_diff_t = IteratorTraits<ForwardC<int>>::difference_type;
+    using I_diff_t = IteratorTraits<InputC<int>>::difference_type;
+    using diff_t = std::ptrdiff_t;
+
+    TEST_NESTED_TYPE(difference_type, A_diff_t, Array2, int);
+    TEST_NESTED_TYPE(difference_type, C_diff_t, ContinuousC, int);
+    TEST_NESTED_TYPE(difference_type, R_diff_t, RandomAccessC, int);
+    TEST_NESTED_TYPE(difference_type, B_diff_t, BidirectC, int);
+    TEST_NESTED_TYPE(difference_type, F_diff_t, ForwardC, int);
+    TEST_NESTED_TYPE(difference_type, I_diff_t, InputC, int);
+
+    using VecBool_diff_t = typename std::iterator_traits
+            < decltype( RangeTraits::begin(std::declval<std::vector<bool>&>()) )
+            >::difference_type;
+
+    TEST_NESTED_TYPE(difference_type, VecBool_diff_t, std::vector, bool);
+
+    // InputC, _
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, InputC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, ForwardC, F);
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, BidirectC, B);
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, RandomAccessC, R);
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, ContinuousC, C);
+
+    // ForwardC, _
+    TEST_NESTED_TYPE(difference_type, diff_t, ForwardC, InputC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, ForwardC, ForwardC, F);
+    TEST_NESTED_TYPE(difference_type, diff_t, ForwardC, BidirectC, B);
+    TEST_NESTED_TYPE(difference_type, diff_t, ForwardC, RandomAccessC, R);
+    TEST_NESTED_TYPE(difference_type, diff_t, ForwardC, ContinuousC, C);
+
+    // BidirectC, _
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, InputC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, ForwardC, F);
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, BidirectC, B);
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, RandomAccessC, R);
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, ContinuousC, C);
+
+    // RandomAccessC, _
+    TEST_NESTED_TYPE(difference_type, diff_t, RandomAccessC, InputC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, RandomAccessC, ForwardC, F);
+    TEST_NESTED_TYPE(difference_type, diff_t, RandomAccessC, BidirectC, B);
+    TEST_NESTED_TYPE(difference_type, diff_t, RandomAccessC, RandomAccessC, R);
+    TEST_NESTED_TYPE(difference_type, diff_t, RandomAccessC, ContinuousC, C);
+
+    // ContinuousC, _
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, InputC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, ForwardC, F);
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, BidirectC, B);
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, RandomAccessC, R);
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, ContinuousC, C);
+
+    // ContinuousC, _, ContinuousC
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, InputC, ContinuousC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, ForwardC, ContinuousC, F);
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, BidirectC, ContinuousC, B);
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, RandomAccessC, ContinuousC, R);
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, ContinuousC, ContinuousC, C);
+
+    // RandomAccessC, _, RandomAccessC
+    TEST_NESTED_TYPE(difference_type, diff_t, RandomAccessC, InputC, RandomAccessC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, RandomAccessC, ForwardC, RandomAccessC, F);
+    TEST_NESTED_TYPE(difference_type, diff_t, RandomAccessC, BidirectC, RandomAccessC, B);
+    TEST_NESTED_TYPE(difference_type, diff_t, RandomAccessC, RandomAccessC, RandomAccessC, R);
+    TEST_NESTED_TYPE(difference_type, diff_t, RandomAccessC, ContinuousC, RandomAccessC, C);
+
+    // BidirectC, _, BidirectC
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, InputC, BidirectC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, ForwardC, BidirectC, F);
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, BidirectC, BidirectC, B);
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, RandomAccessC, BidirectC, R);
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, ContinuousC, BidirectC, C);
+
+    // ForwardC, _, ForwardC
+    TEST_NESTED_TYPE(difference_type, diff_t, ForwardC, InputC, ForwardC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, ForwardC, ForwardC, ForwardC, F);
+    TEST_NESTED_TYPE(difference_type, diff_t, ForwardC, BidirectC, ForwardC, B);
+    TEST_NESTED_TYPE(difference_type, diff_t, ForwardC, RandomAccessC, ForwardC, R);
+    TEST_NESTED_TYPE(difference_type, diff_t, ForwardC, ContinuousC, ForwardC, C);
+
+    // InputC, _, InputC
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, InputC, InputC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, ForwardC, InputC, F);
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, BidirectC, InputC, B);
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, RandomAccessC, InputC, R);
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, ContinuousC, InputC, C);
+
+    // InputC <-> ForwardC <-> BidirectC <-> RandomAccessC <-> ContinuousC
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, ForwardC, BidirectC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, ForwardC, BidirectC, RandomAccessC, F);
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, RandomAccessC, ContinuousC, B);
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, RandomAccessC, BidirectC, C);
+    TEST_NESTED_TYPE(difference_type, diff_t, RandomAccessC, BidirectC, ForwardC, R);
+    TEST_NESTED_TYPE(difference_type, diff_t, BidirectC, ForwardC, InputC, C);
+    TEST_NESTED_TYPE(difference_type, diff_t, InputC, ForwardC, BidirectC, RandomAccessC, ContinuousC, I);
+    TEST_NESTED_TYPE(difference_type, diff_t, ContinuousC, RandomAccessC, BidirectC, ForwardC, InputC, C);
+}
+
 
 // TODO: add tests

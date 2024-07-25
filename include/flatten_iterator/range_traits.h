@@ -854,15 +854,25 @@ private: // TODO: section name
         }
     }
 
+    static constexpr auto common_difference_type() noexcept {
+        if constexpr (MaxDepth == 0) {
+            return Type
+                    < typename std::iterator_traits<DeepestIterator>::difference_type
+                    >{};
+        } else {
+            return Type<std::ptrdiff_t>{};
+        }
+    }
+
     using DeepestIterator = std::remove_reference_t
             < decltype( current<MaxDepth>(std::declval<Ranges&>()) )
             >;
 
-public: // TODO: section name
+public: // Iterator nested types
         // TODO: replace all the `void` types to the proper types
 
     using value_type = typename std::iterator_traits<DeepestIterator>::value_type;
-    using difference_type = void;
+    using difference_type = typename decltype( common_difference_type() )::type;
     using reference = typename std::iterator_traits<DeepestIterator>::reference;
     using pointer = typename std::iterator_traits<DeepestIterator>::pointer;
     using iterator_category = typename decltype( common_iterator_tag() )::type;
