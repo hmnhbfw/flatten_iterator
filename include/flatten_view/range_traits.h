@@ -3,8 +3,8 @@
 /// \author Pavel Tsayukov
 /// \copyright MIT License
 
-#ifndef FLATTEN_ITERATOR_TRAITS_H
-#define FLATTEN_ITERATOR_TRAITS_H
+#ifndef FLATTEN_VIEW_RANGE_TRAITS_H
+#define FLATTEN_VIEW_RANGE_TRAITS_H
 
 #include <iterator>
 #include <tuple>
@@ -698,7 +698,7 @@ class RangesAllTheWayDownTraits {
 private: // Type deduction methods
 
     template <typename RorV, typename... RWs>
-    static constexpr auto wrap_ranges(std::tuple<RWs...> acc) noexcept {
+    static constexpr auto wrap_ranges_impl(std::tuple<RWs...> acc) noexcept {
         if constexpr (!RangeTraits::template range<RorV>) {
             return acc;
         } else {
@@ -708,7 +708,7 @@ private: // Type deduction methods
             using Value = std::remove_reference_t<decltype( *std::declval<Iterator&>() )>;
             using RangeWrapper = Type<PseudoRange<Iterator, Sentinel>>;
 
-            return wrap_ranges<Value>(std::tuple_cat(acc, std::tuple<RangeWrapper>{}));
+            return wrap_ranges_impl<Value>(std::tuple_cat(acc, std::tuple<RangeWrapper>{}));
         }
     }
 
@@ -716,7 +716,7 @@ private: // Type deduction methods
         using Value = std::remove_reference_t<decltype( *std::declval<I&>() )>;
         using RangeWrapper = Type<PseudoRange<I, S>>;
 
-        return wrap_ranges<Value>(std::tuple<RangeWrapper>{});
+        return wrap_ranges_impl<Value>(std::tuple<RangeWrapper>{});
     }
 
     template <typename... RWs>
@@ -878,7 +878,7 @@ public: // Iterator nested types
     using iterator_category = typename decltype( common_iterator_tag() )::type;
 
 #if defined(__cpp_concepts) && __cpp_concepts >= 201907L
-    using iterator_concept = void;
+    # TODO: impl iterator_concept
 #endif
 };
 
@@ -923,4 +923,4 @@ struct DefaultConceptRangeTraits {
 
 } // namespace flatten
 
-#endif // FLATTEN_ITERATOR_TRAITS_H
+#endif // FLATTEN_VIEW_RANGE_TRAITS_H

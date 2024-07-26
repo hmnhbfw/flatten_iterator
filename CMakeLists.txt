@@ -3,15 +3,15 @@
   Distributed under the MIT License. See accompanying file LICENSE or
   https://opensource.org/license/mit for details.
   ------------------------------------------------------------------------------
-  'flatten_iterator' header-only library
+  'flatten_view' header-only library
 #]=============================================================================]
 
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
-project(flatten_iterator
+project(flatten_view
   VERSION 0.1.0
   DESCRIPTION "TODO: add brief description"
-  HOMEPAGE_URL "https://github.com/tsayukov/flatten_iterator"
+  HOMEPAGE_URL "https://github.com/tsayukov/flatten_view"
   LANGUAGES CXX
 )
 
@@ -19,16 +19,16 @@ include("${PROJECT_SOURCE_DIR}/cmake/Common.cmake")
 no_in_source_builds_guard()
 
 use_cxx_standard_at_least(17)
-disable_cxx_extensions()
+disable_cxx_extensions() # TODO: test with a library that needs language extensions
 
 include_project_module(Externals)
 
-add_project_library(flatten_iterator INTERFACE)
-target_link_libraries(flatten_iterator_flatten_iterator
+add_project_library(flatten_view INTERFACE)
+target_link_libraries(flatten_view_flatten_view
   INTERFACE
-    flatten_iterator_cxx_standard
+    flatten_view::cxx_standard
 )
-target_include_directories(flatten_iterator_flatten_iterator
+target_include_directories(flatten_view_flatten_view
   ${WARNING_GUARD}
   INTERFACE
     "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
@@ -44,8 +44,8 @@ if (ENABLE_INSTALL)
   install_project_headers("include")
   install_project_targets(
     TARGETS
-      flatten_iterator_flatten_iterator
-      flatten_iterator_cxx_standard
+      flatten_view_flatten_view
+      flatten_view_cxx_standard
     HEADER_ONLY
   )
 

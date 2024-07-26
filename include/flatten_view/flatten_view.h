@@ -1,10 +1,10 @@
-/// \file flatten_iterator.h
+/// \file flatten_view.h
 /// TODO: add file description
 /// \author Pavel Tsayukov
 /// \copyright MIT License
 
-#ifndef FLATTEN_ITERATOR_FLATTEN_ITERATOR_H
-#define FLATTEN_ITERATOR_FLATTEN_ITERATOR_H
+#ifndef FLATTEN_VIEW_FLATTEN_VIEW_H
+#define FLATTEN_VIEW_FLATTEN_VIEW_H
 
 #include "range_traits.h"
 
@@ -41,7 +41,7 @@ public: // Nested iterator types
     using iterator_category = typename Traits::iterator_category;
 
 #if defined(__cpp_concepts) && __cpp_concepts >= 201907L
-    using iterator_concept = typename Traits::iterator_concept;
+    # TODO: impl iterator_concept
 #endif
 
 public: // Constructors
@@ -57,4 +57,4 @@ public: // TODO: add name for section
 
 } // namespace flatten
 
-#endif // FLATTEN_ITERATOR_FLATTEN_ITERATOR_H
+#endif // FLATTEN_VIEW_FLATTEN_VIEW_H
