@@ -1,17 +1,13 @@
 #include "common.h"
 
+#include "flatten_view/flatten_view.h"
 #include <flatten_view/range_traits.h>
 
 #include <gtest/gtest.h>
 
 // Traits
 
-using RangeTraits =
-#if defined(__cpp_concepts) && __cpp_concepts >= 201907L
-        flatten::DefaultConceptRangeTraits
-#else
-        flatten::DefaultPreConceptRangeTraits;
-#endif
+using RangeTraits = flatten::DefaultRangeTraits;
 
 template <typename R>
 using Traits = typename flatten::details

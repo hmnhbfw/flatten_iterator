@@ -6,6 +6,9 @@
 #ifndef FLATTEN_VIEW_RANGE_TRAITS_H
 #define FLATTEN_VIEW_RANGE_TRAITS_H
 
+// NOTE: support only C++17 and further so far
+#if __cplusplus >= 201703L
+
 #include <iterator>
 #include <tuple>
 #include <type_traits>
@@ -14,15 +17,24 @@
     #include <ranges>
 #endif
 
+#if __has_include(<range/v3/iterator/concepts.hpp>) && __has_include(<range/v3/range/concepts.hpp>)
+    #include <range/v3/iterator/concepts.hpp>
+    #include <range/v3/range/concepts.hpp>
+#endif
+
 namespace flatten {
 
 namespace details {
 
-// Type wrapper
+/// Type wrapper to return types from functions.
 template <typename T>
 struct Type {
     using type = T;
 };
+
+/// Non-type wrapper to use non-type template parameters in deduction guides.
+template <auto V>
+struct Value {};
 
 namespace traits {
 
@@ -42,11 +54,11 @@ inline constexpr bool Requires = std::is_void_v<std::void_t<Ts...>>;
 
 namespace lang {
 
-// [concept.same]
+/// [concept.same]
 template <typename T, typename U>
 inline constexpr bool IsSameAs = std::is_same_v<T, U> && std::is_same_v<U, T>;
 
-// [concept.convertible]
+/// [concept.convertible]
 template <typename From, typename To, typename = void>
 inline constexpr bool IsConvertibleTo = false;
 
@@ -63,7 +75,7 @@ using ExplicitCast = decltype( explicit_cast_impl<From, To>(std::declval<Produce
 
 } // namespace impl
 
-// [concept.convertible]
+/// [concept.convertible]
 template <typename From, typename To>
 inline constexpr bool IsConvertibleTo
         < From, To
@@ -73,7 +85,7 @@ inline constexpr bool IsConvertibleTo
                 >
         > = true;
 
-// [concept.commonref]
+/// [concept.commonref]
 template <typename T, typename U, typename = void>
 inline constexpr bool IsCommonReferenceWith = false;
 
@@ -209,7 +221,7 @@ struct CommonReference<T1, T2, 5> {};
 
 } // namespace impl
 
-// [concept.commonref]
+/// [concept.commonref]
 template <typename T, typename U>
 inline constexpr bool IsCommonReferenceWith
         < T, U
@@ -223,7 +235,7 @@ inline constexpr bool IsCommonReferenceWith
                 >
         > = true;
 
-// [concept.assignable]
+/// [concept.assignable]
 template <typename Lhs, typename Rhs, typename = void>
 inline constexpr bool IsAssignableFrom = false;
 
@@ -234,7 +246,7 @@ constexpr auto ForwardThenAssign(Lhs lhs, Rhs&& rhs) -> decltype( lhs = std::for
 
 } // namespace impl
 
-// [concept.assignable]
+/// [concept.assignable]
 template <typename Lhs, typename Rhs>
 inline constexpr bool IsAssignableFrom
         < Lhs, Rhs
@@ -252,25 +264,27 @@ inline constexpr bool IsAssignableFrom
                 >
         > = true;
 
-// [concept.swappable]
-// TODO: so far, it's not clear what the difference between `std::swappable`
-// and `std::is_swappable_v` is, but for now, it should works
+/// [concept.swappable]
+/// \note
+/// So far, I think \c std::is_swappable_v can be used here with no harms,
+/// because \c std::swappable just adds CPO.
 template <typename T>
 inline constexpr bool IsSwappable = std::is_swappable_v<T>;
 
-// [concept.destructible]
+/// [concept.destructible]
 template <typename T>
 inline constexpr bool IsDestructible = std::is_nothrow_destructible_v<T>;
 
-// [concept.constructible]
+/// [concept.constructible]
 template <typename T, typename... Args>
 inline constexpr bool IsConstructibleFrom =
         IsDestructible<T> && std::is_constructible_v<T, Args...>;
 
-// [concept.default.init]
+/// [concept.default.init]
 template <typename T, typename = void>
 inline constexpr bool IsDefaultInitializable = false;
 
+/// [concept.default.init]
 template <typename T>
 inline constexpr bool IsDefaultInitializable
         < T
@@ -283,12 +297,12 @@ inline constexpr bool IsDefaultInitializable
                 >
         > = true;
 
-// [concept.moveconstructible]
+/// [concept.moveconstructible]
 template <typename T>
 inline constexpr bool IsMoveConstructible =
         IsConstructibleFrom<T, T> && IsConvertibleTo<T, T>;
 
-// [concept.copyconstructible]
+/// [concept.copyconstructible]
 template <typename T>
 inline constexpr bool IsCopyConstructible =
         IsMoveConstructible<T>
@@ -301,7 +315,7 @@ inline constexpr bool IsCopyConstructible =
 
 namespace comparison {
 
-// [concept.booleantestable]
+/// [concept.booleantestable]
 template <typename T, typename = void>
 inline constexpr bool IsBooleanTestable = false;
 
@@ -315,7 +329,7 @@ constexpr auto forward_then_not(T&& t) -> decltype( !std::forward<T>(t) );
 
 } // namespace impl
 
-// [concept.booleantestable]
+/// [concept.booleantestable]
 template <typename T>
 inline constexpr bool IsBooleanTestable
         < T
@@ -327,7 +341,7 @@ inline constexpr bool IsBooleanTestable
                 >
         > = true;
 
-// [concept.equalitycomparable]
+/// [concept.equalitycomparable]
 template <typename T, typename U, typename = void>
 inline constexpr bool IsWeaklyEqualityComparableWith = false;
 
@@ -340,7 +354,7 @@ constexpr auto equal_and_not_equal(const std::remove_reference_t<T>& t,
 
 } // namespace impl
 
-// [concept.equalitycomparable]
+/// [concept.equalitycomparable]
 template <typename T, typename U>
 inline constexpr bool IsWeaklyEqualityComparableWith
         < T, U
@@ -354,19 +368,19 @@ inline constexpr bool IsWeaklyEqualityComparableWith
 
 namespace object {
 
-// [concepts.object]
+/// [concepts.object]
 template <typename T>
 inline constexpr bool IsMovable =
         std::is_object_v<T> && lang::IsMoveConstructible<T>
         && lang::IsAssignableFrom<T&, T> && lang::IsSwappable<T>;
 
-// [concepts.object]
+/// [concepts.object]
 template <typename T>
 inline constexpr bool IsCopyable =
         lang::IsCopyConstructible<T> && IsMovable<T> && lang::IsAssignableFrom<T&, T&>
         && lang::IsAssignableFrom<T&, const T&> && lang::IsAssignableFrom<T&, const T>;
 
-// [concepts.object]
+/// [concepts.object]
 template <typename T>
 inline constexpr bool IsSemiregular = IsCopyable<T> && lang::IsDefaultInitializable<T>;
 
@@ -375,7 +389,7 @@ inline constexpr bool IsSemiregular = IsCopyable<T> && lang::IsDefaultInitializa
 
 namespace iterator {
 
-// [iterator.concept.winc]
+/// [iterator.concept.winc]
 template <typename I, typename = void>
 inline constexpr bool IsWeaklyIncrementable = false;
 
@@ -396,7 +410,7 @@ inline constexpr bool IsSignedIntegerLike =
 
 } // namespace impl
 
-// [iterator.concept.winc]
+/// [iterator.concept.winc]
 template <typename I>
 inline constexpr bool IsWeaklyIncrementable
         < I
@@ -415,7 +429,7 @@ inline constexpr bool IsWeaklyIncrementable
                 >
         > = true;
 
-// [iterator.concept.iterator]
+/// [iterator.concept.iterator]
 template <typename I, typename = void>
 inline constexpr bool IsInputOrOutputIterator = false;
 
@@ -435,7 +449,7 @@ constexpr auto dereference(I i) -> decltype( *i );
 
 } // namespace impl
 
-// [iterator.concept.iterator]
+/// [iterator.concept.iterator]
 template <typename I>
 inline constexpr bool IsInputOrOutputIterator
         < I
@@ -447,10 +461,11 @@ inline constexpr bool IsInputOrOutputIterator
                 >
         > = true;
 
-// [iterator.concept.sentinel]
+/// [iterator.concept.sentinel]
 template <typename I, typename S, typename = void>
 inline constexpr bool IsSentinelFor = false;
 
+/// [iterator.concept.sentinel]
 template <typename I,  typename S>
 inline constexpr bool IsSentinelFor
         < I, S
@@ -644,7 +659,7 @@ public:
 
 inline constexpr impl::End EndFn;
 
-// [range.range]
+/// [range.range]
 template <typename R, typename = void>
 inline constexpr bool IsRange = false;
 
@@ -658,6 +673,7 @@ constexpr auto range_end(R& r) -> decltype( EndFn(r) );
 
 } // namespace impl
 
+/// [range.range]
 template <typename R>
 inline constexpr bool IsRange
         < R
@@ -685,6 +701,7 @@ struct PseudoRange {
     S end;
 };
 
+/// TODO: add description
 template
         < typename I
         , typename S
@@ -869,7 +886,6 @@ private: // TODO: section name
             >;
 
 public: // Iterator nested types
-        // TODO: replace all the `void` types to the proper types
 
     using value_type = typename std::iterator_traits<DeepestIterator>::value_type;
     using difference_type = typename decltype( common_difference_type() )::type;
@@ -878,15 +894,14 @@ public: // Iterator nested types
     using iterator_category = typename decltype( common_iterator_tag() )::type;
 
 #if defined(__cpp_concepts) && __cpp_concepts >= 201907L
-    # TODO: impl iterator_concept
+    // TODO: impl iterator_concept
 #endif
 };
 
 } // namespace details
 
 
-/// TODO: add description
-struct DefaultPreConceptRangeTraits {
+struct PreConceptRangeTraits {
     template <typename R>
     static constexpr bool range = details::traits::ranges::IsRange<R>;
 
@@ -904,8 +919,7 @@ struct DefaultPreConceptRangeTraits {
 
 #if defined(__cpp_concepts) && __cpp_concepts >= 201907L
 
-/// TODO: add description
-struct DefaultConceptRangeTraits {
+struct ConceptRangeTraits {
     template <typename R>
     static constexpr bool range = std::ranges::range<R>;
 
@@ -921,6 +935,26 @@ struct DefaultConceptRangeTraits {
 
 #endif // defined(__cpp_concepts) && __cpp_concepts >= 201907L
 
+#if __has_include(<range/v3/iterator/concepts.hpp>) && __has_include(<range/v3/range/concepts.hpp>)
+
+struct RangeV3Traits {
+    template <typename R>
+    static constexpr bool range = ranges::range<R>;
+
+    template <typename I>
+    static constexpr bool input_or_output_iterator = ranges::input_or_output_iterator<I>;
+
+    template <typename I, typename S>
+    static constexpr bool sentinel_for = ranges::sentinel_for<I, S>;
+
+    static constexpr auto begin = ranges::begin;
+    static constexpr auto end = ranges::end;
+};
+
+#endif // __has_include(<range/v3/iterator/concepts.hpp>) && __has_include(<range/v3/range/concepts.hpp>)
+
 } // namespace flatten
+
+#endif // __cplusplus >= 201703L
 
 #endif // FLATTEN_VIEW_RANGE_TRAITS_H

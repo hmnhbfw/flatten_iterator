@@ -141,11 +141,11 @@ struct ContainerWithFreeBeginEnd {
     std::array<int, 2> array;
 };
 
-auto begin(ContainerWithFreeBeginEnd& c) noexcept {
+inline auto begin(ContainerWithFreeBeginEnd& c) noexcept {
     return c.array.begin();
 }
 
-auto end(ContainerWithFreeBeginEnd& c) noexcept {
+inline auto end(ContainerWithFreeBeginEnd& c) noexcept {
     return c.array.end();
 }
 
