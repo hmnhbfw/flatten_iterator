@@ -154,12 +154,14 @@ public: // Dummy constructor
 
 public: // Transparent getters
 
-    constexpr R&& transparent_get(R&& range) noexcept {
-        return std::forward<R>(range);
+    template <typename U>
+    constexpr U&& transparent_get(U&& range) noexcept {
+        return std::forward<U>(range);
     }
 
-    constexpr R&& transparent_get(R&& range) const noexcept {
-        return std::forward<R>(range);
+    template <typename U>
+    constexpr U&& transparent_get(U&& range) const noexcept {
+        return std::forward<U>(range);
     }
 };
 
@@ -169,7 +171,7 @@ template <typename R>
 class BorrowingController
         < R
         , Borrowing::IF_NEEDED
-        , require::AllOf<std::is_lvalue_reference_v<R>>
+        , require::AllOf<!std::is_lvalue_reference_v<R>>
         > {
     R range_;
 
@@ -186,15 +188,11 @@ public: // Constructor
 
 public: // Transparent getters
 
-    template <typename U>
-    constexpr R& transparent_get(U&&) noexcept {
-        static_assert(std::is_same_v<R, std::decay_t<U>>);
+    constexpr R& transparent_get(R&&) noexcept {
         return range_;
     }
 
-    template <typename U>
-    constexpr const R& transparent_get(U&&) const noexcept {
-        static_assert(std::is_same_v<R, std::decay_t<U>>);
+    constexpr const R& transparent_get(R&&) const noexcept {
         return range_;
     }
 };
@@ -233,8 +231,8 @@ public: // Constructors
     template <typename R>
     constexpr View(R&& range, RangeTraits, Value<Tag>)
             noexcept(std::is_nothrow_constructible_v<FlatIterator, I, S>
-                    && details::BorrowingController<R, Tag>::is_noexcept())
-            : details::BorrowingController<R, Tag>(std::forward<R>(range))
+                    && details::BorrowingController<R&&, Tag>::is_noexcept())
+            : details::BorrowingController<R&&, Tag>(std::forward<R>(range))
             , flat_iterator_(RangeTraits::begin(this->transparent_get(std::forward<R>(range))),
                              RangeTraits::end(this->transparent_get(std::forward<R>(range)))) {
         static_assert(RangeTraits::template range<View>,
@@ -324,8 +322,8 @@ template
         , typename = require::AllOf<RangeTraits::template range<R>>
         >
 constexpr auto view_fn(R&& range) noexcept(
-        noexcept(View(std::forward<R>(range), RangeTraits{}, Borrowing::IF_NEEDED))) {
-    return View(std::forward<R>(range), RangeTraits{}, Borrowing::IF_NEEDED);
+        noexcept(View(std::forward<R>(range), RangeTraits{}, details::Value<Borrowing::IF_NEEDED>{}))) {
+    return View(std::forward<R>(range), RangeTraits{}, details::Value<Borrowing::IF_NEEDED>{});
 }
 
 /// TODO: add description
@@ -335,8 +333,8 @@ template
         , typename = require::AllOf<DefaultRangeTraits::template range<R>>
         >
 constexpr auto view_fn(R&& range) noexcept(
-        noexcept(View(std::forward<R>(range), DefaultRangeTraits{}, Tag))) {
-    return View(std::forward<R>(range), DefaultRangeTraits{}, Tag);
+        noexcept(View(std::forward<R>(range), DefaultRangeTraits{}, details::Value<Tag>{}))) {
+    return View(std::forward<R>(range), DefaultRangeTraits{}, details::Value<Tag>{});
 }
 
 /// TODO: add description
@@ -347,8 +345,8 @@ template
         , typename = require::AllOf<RangeTraits::template range<R>>
         >
 constexpr auto view_fn(R&& range) noexcept(
-        noexcept(View(std::forward<R>(range), RangeTraits{}, Tag))) {
-    return View(std::forward<R>(range), RangeTraits{}, Tag);
+        noexcept(View(std::forward<R>(range), RangeTraits{}, details::Value<Tag>{}))) {
+    return View(std::forward<R>(range), RangeTraits{}, details::Value<Tag>{});
 }
 
 } // namespace flatten
