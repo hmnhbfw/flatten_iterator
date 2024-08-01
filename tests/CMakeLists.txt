@@ -11,6 +11,15 @@ target_link_libraries(flatten_view_basic_range_traits_test
 )
 gtest_discover_tests(flatten_view_basic_range_traits_test)
 
+add_project_executable(iter_storage_test iter_storage_test.cpp)
+target_link_libraries(flatten_view_iter_storage_test
+  PRIVATE
+    flatten_view::flatten_view
+    ${CXX_OPTIONS}
+    GTest::gtest_main
+)
+gtest_discover_tests(flatten_view_iter_storage_test)
+
 add_project_executable(flatten_view_test flatten_view_test.cpp)
 target_link_libraries(flatten_view_flatten_view_test
   PRIVATE
