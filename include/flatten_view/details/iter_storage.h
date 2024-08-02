@@ -12,21 +12,63 @@
 #include <tuple>
 #include <type_traits>
 
-namespace flatten::details {
+#if defined(NDEBUG)
+    #include <stdexcept>
+#endif
 
-inline constexpr struct {} Nothing = {};
+namespace flatten::details {
 
 /// Optional-like class that delegates the management of its resources to
 /// an owner class, assuming that the owner class knows necessary invariants.
 template <typename T>
-union NonOwningMaybe {
-    decltype(Nothing) nothing;
-    T value;
+class NonOwningMaybe {
+    static constexpr struct {} Nothing = {};
+
+    union {
+        decltype( Nothing ) nothing_;
+        T value_;
+    };
+
+private: // Debug information
+
+#if defined(NDEBUG)
+    enum class Tag { NOTHING, VALUE } tag_;
+
+    class BadValueError : public std::runtime_error {
+        using std::runtime_error::runtime_error;
+    };
+#endif
+
+    template <bool B = true>
+    static constexpr bool is_noexcept =
+    #if defined(NDEBUG)
+            false
+    #else
+            B
+    #endif
+            ;
 
 public: // Constructor/Destructor
 
-    constexpr NonOwningMaybe() noexcept : nothing(Nothing) {}
-    ~NonOwningMaybe() {}
+    constexpr NonOwningMaybe() noexcept(is_noexcept<>)
+            : nothing_(Nothing)
+    #if defined(NDEBUG)
+            , tag_(Tag::NOTHING)
+    #endif
+            {}
+
+#if __cplusplus >= 202002L
+    constexpr
+#endif
+    ~NonOwningMaybe() noexcept(is_noexcept<>) {
+    #if defined(NDEBUG)
+        if (tag_ == Tag::VALUE) {
+            throw BadValueError(
+                "Destroying `NonOwningMaybe` is not allowed until its defined "
+                "value is manually destroyed.");
+        }
+    #endif
+    }
 
 public: // An object of this class is not allowed to manage its resources by itself
 
@@ -34,27 +76,95 @@ public: // An object of this class is not allowed to manage its resources by its
     NonOwningMaybe& operator=(const NonOwningMaybe&) = delete;
     NonOwningMaybe(NonOwningMaybe&&) = delete;
     NonOwningMaybe& operator=(NonOwningMaybe&&) = delete;
+
+public: // Value access
+
+    constexpr T& value() noexcept(is_noexcept<>) {
+        return const_cast<T&>(
+                static_cast<const NonOwningMaybe&>(*this).value());
+    }
+
+    constexpr const T& value() const noexcept(is_noexcept<>) {
+    #if defined(NDEBUG)
+        if (tag_ == Tag::NOTHING) {
+            throw BadValueError("Access to an undefined value.");
+        }
+    #endif
+        return value_;
+    }
+
+public: // Value management
+
+    template <typename... Args>
+    constexpr void init_value(Args&&... args) noexcept(
+            is_noexcept<noexcept( T(std::forward<Args>(args)...) )>) {
+    #if defined(NDEBUG)
+        if (tag_ == Tag::VALUE) {
+            throw BadValueError(
+                "Initialization of a defined value. "
+                "Hint: use `mutate_existed_value` instead.");
+        }
+    #endif
+        (void) new(&value_) T(std::forward<Args>(args)...);
+    #if defined(NDEBUG)
+        tag_ = Tag::VALUE;
+    #endif
+    }
+
+    template <typename U>
+    constexpr void mutate_existed_value(U&& other) noexcept(
+            is_noexcept<noexcept( value_ = std::forward<U>(other) )>) {
+    #if defined(NDEBUG)
+        if (tag_ == Tag::NOTHING) {
+            throw BadValueError(
+                "Access to an undefined value. Hint: use `init_value` instead.");
+        }
+    #endif
+        value_ = std::forward<U>(other);
+    }
+
+    constexpr void destroy_existed_value() noexcept(
+            is_noexcept<std::is_nothrow_destructible_v<T>>) {
+    #if defined(NDEBUG)
+        if (tag_ == Tag::NOTHING) {
+            throw BadValueError(
+                "Destroying of a defined value. "
+                "Hint: initialize the value first via `init_value`.");
+        }
+    #endif
+        value_.~T();
+    #if defined(NDEBUG)
+        tag_ = Tag::NOTHING;
+    #endif
+    }
 };
 
 template <typename Tuple, typename RangeTraits>
-class IterStorage {
+class IterStorage final {
     static_assert(false, "Instantiation of the primary template is not allowed here, "
                          "see the specialization and its requirements.");
 };
 
 /// Storage of pairs of an iterator and its sentinel.
 /// \note
-/// The storage's invariant: if and only if the first (top, head) iterator is
-/// equal to its sentinel then other pairs are undefined.
-template <typename RangeTraits, typename Head, typename... Tail>
-class IterStorage<std::tuple<Head, Tail...>, RangeTraits> {
-private: // Helper type aliases and constants
+/// The storage's invariant: if the first (aka top, head) iterator is equal to
+/// its sentinel then other pairs are undefined.
+template <typename Head, typename... Tail, typename RangeTraits>
+class IterStorage<std::tuple<Head, Tail...>, RangeTraits> final {
+    std::tuple<Head, NonOwningMaybe<Tail>...> storage_;
+
+private: // Shortcuts for RangeTraits variable templates and constants
 
     template <typename I>
     static constexpr bool IsInOrOutIterator = RangeTraits::template input_or_output_iterator<I>;
 
     template <typename I, typename S>
     static constexpr bool IsSentinelFor = RangeTraits::template sentinel_for<I, S>;
+
+    static constexpr auto BeginFn = RangeTraits::begin;
+    static constexpr auto EndFn = RangeTraits::end;
+
+private: // Iterator and sentinel types
 
     template <typename TupleLike>
     using IteratorFrom = std::tuple_element_t<0, TupleLike>;
@@ -64,28 +174,6 @@ private: // Helper type aliases and constants
 
     using Iterator = IteratorFrom<Head>;
     using Sentinel = SentinelFrom<Head>;
-
-    static constexpr auto this_ref() -> IterStorage&;
-    static constexpr auto const_this_ref() -> const IterStorage&;
-    static constexpr auto this_rvalue_ref() -> IterStorage&&;
-
-    template <typename T>
-    using LvalueRef = std::remove_cv_t<std::remove_reference_t<T>>&;
-
-private: // `Tuple` must be pairs of an iterator and its sentinel
-
-    static_assert(((std::tuple_size_v<Tail> == 2) && ...),
-                  "Each tuple must have two elements, that is, an iterator and its sentinel.");
-    static_assert((IsInOrOutIterator<Iterator> && ... && IsInOrOutIterator<IteratorFrom<Tail>>),
-                  "The first element of each tuple must be at least "
-                  "an input or output iterator.");
-    static_assert((IsSentinelFor<Iterator, Sentinel>
-                  && ... && IsSentinelFor<IteratorFrom<Tail>, SentinelFrom<Tail>>),
-                  "Each tuple must be a pair of an iterator and its sentinel.");
-
-private: // Storage
-
-    std::tuple<Head, NonOwningMaybe<Tail>...> storage_;
 
 private: // Location in the storage
 
@@ -99,59 +187,89 @@ private: // Location in the storage
         return depth <= MaxDepth;
     }
 
-    template <std::size_t Depth>
-    using Subtuple = std::remove_reference_t<decltype( this_ref().template get<Depth>() )>;
+private: // `Tuple` must be pairs of an iterator and its sentinel
+
+    static_assert(((std::tuple_size_v<Tail> == 2) && ...),
+                  "Each tuple must have two elements, that is, an iterator and its sentinel.");
+    static_assert((IsInOrOutIterator<Iterator> && ... && IsInOrOutIterator<IteratorFrom<Tail>>),
+                  "The first element of each tuple must be at least "
+                  "an input or output iterator.");
+    static_assert((IsSentinelFor<Iterator, Sentinel>
+                  && ... && IsSentinelFor<IteratorFrom<Tail>, SentinelFrom<Tail>>),
+                  "Each tuple must be a pair of an iterator and its sentinel.");
+
+private: // Helper functions to use in unevaluating contexts
+
+    static constexpr auto this_ref() -> IterStorage&;
+    static constexpr auto const_this_ref() -> const IterStorage&;
+    static constexpr auto this_rvalue_ref() -> IterStorage&&;
+
+private: // Noexcept checks
+
+    template <typename... Ts>
+    static constexpr bool IsNothrowDestructible = (std::is_nothrow_destructible_v<Ts> && ...);
+
+    template <typename... Ts>
+    static constexpr bool IsNothrowCopyConstructible =
+            (std::is_nothrow_copy_constructible_v<Ts> && ...);
+
+    template <typename... Ts>
+    static constexpr bool IsNothrowMoveConstructible =
+            (std::is_nothrow_move_constructible_v<Ts> && ...);
+
+    template <typename... Ts>
+    static constexpr bool IsNothrowSwappable = (std::is_nothrow_swappable_v<Ts> && ...);
 
 public: // Constructor/Destructor/Assignment operators
-        // TODO: revise exception guarantees: if move/swap throws any exception,
-        // the state of the object will become invalid. Is it possible to lift
-        // the exception guarantees to the basic?
 
-    /// Strong exception guarantee
+    /// \par Exception Safety:
+    /// Strong exception guarantee.
     constexpr IterStorage(Iterator first, Sentinel last) noexcept(
-            noexcept( std::tuple(std::move(first), std::move(last)) ))
-            : storage_(std::tuple(std::move(first), std::move(last)),
+            noexcept( std::make_tuple(std::move(first), std::move(last)) ))
+            : storage_(std::make_tuple(std::move(first), std::move(last)),
                        NonOwningMaybe<Tail>()...) {}
 
-    ~IterStorage() {
-        destroy<HeadDepth>();
+    ~IterStorage() noexcept(IsNothrowDestructible<Head, Tail...>) {
         if (is_tail_initialized()) {
-            destroy_tail();
+            destroy_tail_after();
         }
     }
 
-    /// Strong exception guarantee
+    /// \par Exception Safety:
+    /// Strong exception guarantee.
     constexpr IterStorage(const IterStorage& other) noexcept(
-            (std::is_nothrow_copy_constructible_v<Head>
-                    && ... && std::is_nothrow_copy_constructible_v<Tail>))
-            : storage_(other.get<HeadDepth>(), NonOwningMaybe<Tail>()...) {
+            IsNothrowCopyConstructible<Head, Tail...>)
+            : storage_(other.subtuple<HeadDepth>(), NonOwningMaybe<Tail>()...) {
         if (is_tail_initialized()) {
-            copy_tail(other);
+            construct_tail_after(other);
         }
     }
 
-    /// Strong exception guarantee if \c swap doesn't throw any exceptions,
-    /// otherwise, no exception guarantee
+    /// \par Exception Safety:
+    /// Strong exception guarantee if \c swap of iterators and sentinels doesn't
+    /// throw any exceptions, otherwise, the states of \c *this and \c rhs is
+    /// undefined.
     constexpr IterStorage& operator=(const IterStorage& rhs) noexcept(
             std::is_nothrow_copy_constructible_v<IterStorage>
             && std::is_nothrow_swappable_v<IterStorage>) {
-        auto rhs_copy = rhs;
-        swap(*this, rhs_copy);
+        swap(*this, IterStorage(rhs));
     }
 
+    /// \par Exception Safety:
     /// Strong exception guarantee if moving iterators and sentinels doesn't
-    /// throw any exceptions, otherwise, no exception guarantee
+    /// throw any exceptions, otherwise, the state of \c other is undefined.
     constexpr IterStorage(IterStorage&& other) noexcept(
-            (std::is_nothrow_move_constructible_v<Head>
-                    && ... && std::is_nothrow_move_constructible_v<Tail>))
-            : storage_(std::move(other.get<HeadDepth>()), NonOwningMaybe<Tail>()...) {
+            IsNothrowMoveConstructible<Head, Tail...>)
+            : storage_(std::move(other.subtuple<HeadDepth>()), NonOwningMaybe<Tail>()...) {
         if (is_tail_initialized()) {
-            move_tail(std::move(other));
+            construct_tail_after(std::move(other));
         }
     }
 
-    /// Strong exception guarantee if \c swap doesn't throw any exceptions,
-    /// otherwise, no exception guarantee
+    /// \par Exception Safety:
+    /// Strong exception guarantee if \c swap of iterators and sentinels doesn't
+    /// throw any exceptions, otherwise, the states of \c *this and \c rhs is
+    /// undefined.
     constexpr IterStorage& operator=(IterStorage&& rhs) noexcept(
             std::is_nothrow_swappable_v<IterStorage>) {
         swap(*this, rhs);
@@ -159,20 +277,25 @@ public: // Constructor/Destructor/Assignment operators
 
 public: // Swap
 
+    /// \par Exception Safety:
+    /// Strong exception guarantee if \c swap of iterators and sentinels doesn't
+    /// throw any exceptions, otherwise, the states of \c lhs and \c rhs is
+    /// undefined.
     friend constexpr void swap(IterStorage& lhs, IterStorage& rhs) noexcept(
-            (std::is_nothrow_swappable_v<Head> && ... && std::is_nothrow_swappable_v<Tail>)
-            && (std::is_nothrow_move_constructible_v<Tail> && ...)) {
-        using std::swap;
-        swap(lhs.get<HeadDepth>(), rhs.get<HeadDepth>());
-
+            IsNothrowSwappable<Head, Tail...>
+            && IsNothrowMoveConstructible<Tail...>) {
         const bool is_lhs_tail_init = lhs.is_tail_initialized();
         const bool is_rhs_tail_init = rhs.is_tail_initialized();
         if (is_lhs_tail_init && is_rhs_tail_init) {
-            swap_tail(lhs, rhs);
+            swap_tail_after(lhs, rhs);
         } else if (is_lhs_tail_init) {
-            rhs.move_tail(std::move(lhs));
+            rhs.construct_tail_after(std::move(lhs));
         } else if (is_rhs_tail_init) {
-            lhs.move_tail(std::move(rhs));
+            lhs.construct_tail_after(std::move(rhs));
+        }
+        {
+            using std::swap;
+            swap(lhs.subtuple<HeadDepth>(), rhs.subtuple<HeadDepth>());
         }
     }
 
@@ -184,44 +307,71 @@ public: // Capacity
 
 private: // Subtuple access
 
+    template <typename T>
+    using MutRef = std::remove_const_t<std::remove_reference_t<T>>&;
+
+    template <typename T>
+    using MutRvalueRef = std::remove_const_t<std::remove_reference_t<T>>&&;
+
     template <std::size_t Depth>
     constexpr auto& get() noexcept {
-        using Ref = LvalueRef<decltype( const_this_ref().template get<Depth>() )>;
-        return const_cast<Ref>(static_cast<const IterStorage&>(*this).get<Depth>());
+        using Ref = MutRef<decltype( const_this_ref().template get<Depth>() )>;
+        return const_cast<Ref>(
+                static_cast<const IterStorage&>(*this).subtuple<get>());
     }
 
     template <std::size_t Depth>
     constexpr const auto& get() const noexcept {
         static_assert(is_in_range(Depth));
+        return std::get<Depth>(storage_);
+    }
+
+    template <std::size_t Depth>
+    constexpr auto& subtuple() & noexcept {
+        using Ref = MutRef<decltype( const_this_ref().template subtuple<Depth>() )>;
+        return const_cast<Ref>(
+                static_cast<const IterStorage&>(*this).subtuple<Depth>());
+    }
+
+    template <std::size_t Depth>
+    constexpr auto&& subtuple() && noexcept {
+        using Ref = MutRef<decltype( const_this_ref().template subtuple<Depth>() )>;
+        using RvalueRef = MutRvalueRef<Ref>;
+        return std::move(const_cast<Ref>(
+                static_cast<const IterStorage&>(*this).subtuple<Depth>()));
+    }
+
+    template <std::size_t Depth>
+    constexpr const auto& subtuple() const & noexcept {
         if constexpr (Depth == HeadDepth) {
-            return std::get<HeadDepth>(storage_);
+            return get<HeadDepth>();
         } else {
-            return std::get<Depth>(storage_).value;
+            return get<Depth>().value();
         }
     }
 
     template <std::size_t Depth>
     constexpr auto& current() noexcept {
-        using Ref = LvalueRef<decltype( const_this_ref().template current<Depth>() )>;
-        return const_cast<Ref>(static_cast<const IterStorage&>(*this).current<Depth>());
+        using Ref = MutRef<decltype( const_this_ref().template current<Depth>() )>;
+        return const_cast<Ref>(
+                static_cast<const IterStorage&>(*this).current<Depth>());
     }
 
     template <std::size_t Depth>
     constexpr const auto& current() const noexcept {
-        static_assert(is_in_range(Depth));
-        return std::get<IteratorIndex>(get<Depth>());
+        return std::get<IteratorIndex>(subtuple<Depth>());
     }
 
     template <std::size_t Depth>
     constexpr auto& sentinel() noexcept {
-        using Ref = LvalueRef<decltype( const_this_ref().template sentinel<Depth>() )>;
-        return const_cast<Ref>(static_cast<const IterStorage&>(*this).sentinel<Depth>());
+        using Ref = MutRef<decltype( const_this_ref().template sentinel<Depth>() )>;
+        return const_cast<Ref>(
+                static_cast<const IterStorage&>(*this).sentinel<Depth>());
     }
 
     template <std::size_t Depth>
     constexpr const auto& sentinel() const noexcept {
-        static_assert(is_in_range(Depth));
-        return std::get<SentinelIndex>(get<Depth>());
+        return std::get<SentinelIndex>(subtuple<Depth>());
     }
 
 private: // Tail subtuple initializing
@@ -230,118 +380,76 @@ private: // Tail subtuple initializing
         return current<HeadDepth>() != sentinel<HeadDepth>();
     }
 
-    template <std::size_t Depth>
-    constexpr void init(const Subtuple<Depth>& other) noexcept(
-            noexcept( (void) new (&get<Depth>()) Subtuple<Depth>(other) )) {
-        (void) new (&get<Depth>()) Subtuple<Depth>(other);
-    }
-
-    template <std::size_t Depth>
-    constexpr Subtuple<Depth>& init(Subtuple<Depth>&& other) noexcept(
-            noexcept( (void) new (&get<Depth>()) Subtuple<Depth>(std::move(other)) )) {
-        (void) new (&get<Depth>()) Subtuple<Depth>(std::move(other));
-    }
-
 private: // Deleters
 
     template <std::size_t Depth>
-    constexpr void destroy() noexcept {
-        static_assert(is_in_range(Depth));
-        assert(Depth == HeadDepth || is_tail_initialized());
+    using Subtuple = std::remove_reference_t<decltype( this_ref().template subtuple<Depth>() )>;
 
-        get<Depth>().~Subtuple<Depth>();
+    template <std::size_t Depth>
+    constexpr void destroy() noexcept(IsNothrowDestructible<Subtuple<Depth>>) {
+        static_assert(is_in_range(Depth) && Depth != HeadDepth);
+        assert(is_tail_initialized());
 
-        if constexpr (Depth != HeadDepth) {
-            get<Depth>().nothing = Nothing;
-        }
+        get<Depth>().destroy_existed_value();
     }
 
     template <std::size_t Depth = HeadDepth, std::size_t LastDepth = MaxDepth>
-    constexpr void destroy_tail() noexcept {
-        if constexpr (Depth == LastDepth) {
+    constexpr void destroy_tail_after() noexcept(IsNothrowDestructible<Tail...>) {
+        if constexpr (Depth >= LastDepth) {
             return;
         } else {
             constexpr auto NextDepth = Depth + 1;
             destroy<NextDepth>();
-            return destroy_tail<NextDepth>();
+            return destroy_tail_after<NextDepth>();
         }
     }
 
 private: // Tail subtuple copy/move
 
-    template <std::size_t Depth = HeadDepth>
-    constexpr void copy_tail(const IterStorage& other) noexcept(
-            (std::is_nothrow_copy_constructible_v<Tail> && ...)) {
-        if constexpr ((std::is_nothrow_copy_constructible_v<Tail> && ...)) {
-            return nothrow_copy_tail_impl(other);
+    template <typename U>
+    static constexpr bool is_construct_tail_noexcept() noexcept {
+        if constexpr (std::is_lvalue_reference_v<U&&>) {
+            return IsNothrowCopyConstructible<Tail...>;
         } else {
-            return copy_tail_impl(other);
+            return IsNothrowMoveConstructible<Tail...>;
         }
     }
 
-    template <std::size_t Depth = HeadDepth>
-    constexpr void nothrow_copy_tail_impl(const IterStorage& other) noexcept {
-        if constexpr (Depth == MaxDepth) {
+    template <typename U>
+    constexpr void construct_tail_after(U&& other) noexcept(
+            is_construct_tail_noexcept<U&&>) {
+        static_assert(std::is_same_v<std::decay_t<U>, IterStorage>);
+        if constexpr (is_construct_tail_noexcept<U&&>) {
+            return nothrow_construct_tail_impl(std::forward<U>(other));
+        } else {
+            return construct_tail_impl(std::forward<U>(other));
+        }
+    }
+
+    template <std::size_t Depth = HeadDepth, typename U>
+    constexpr void nothrow_construct_tail_impl(U&& other) noexcept {
+        if constexpr (Depth >= MaxDepth) {
             return;
         } else {
             constexpr auto NextDepth = Depth + 1;
-            init<NextDepth>(other.get<NextDepth>());
-            return nothrow_copy_tail_impl<NextDepth>(other);
+            get<NextDepth>().init_value(std::forward<U>(other).template subtuple<NextDepth>());
+            return nothrow_construct_tail_impl<NextDepth>(std::forward<U>(other));
         }
     }
 
-    template <std::size_t Depth = HeadDepth>
-    void copy_tail_impl(const IterStorage& other) {
-        if constexpr (Depth == MaxDepth) {
-            return;
-        } else {
-            constexpr auto NextDepth = Depth + 1;
-            try {
-                init<NextDepth>(other.get<NextDepth>());
-            } catch (...) {
-                destroy_tail<HeadDepth, NextDepth>();
-                throw;
-            }
-            return copy_tail_impl<NextDepth>(other);
-        }
-    }
-
-    template <std::size_t Depth = HeadDepth>
-    constexpr void move_tail(IterStorage&& other) noexcept(
-            (std::is_nothrow_move_constructible_v<Tail> && ...)) {
-        if constexpr ((std::is_nothrow_move_constructible_v<Tail> && ...)) {
-            return nothrow_move_tail_impl(std::move(other));
-        } else {
-            return move_tail_impl(std::move(other));
-        }
-    }
-
-    template <std::size_t Depth = HeadDepth>
-    constexpr void nothrow_move_tail_impl(IterStorage&& other) noexcept {
-        if constexpr (Depth == MaxDepth) {
-            return;
-        } else {
-            constexpr auto NextDepth = Depth + 1;
-            init<NextDepth>(std::move(other.get<NextDepth>()));
-            other.destroy<NextDepth>();
-            return nothrow_move_tail_impl<NextDepth>(std::move(other));
-        }
-    }
-
-    template <std::size_t Depth = HeadDepth>
-    void move_tail_impl(IterStorage&& other) {
-        if constexpr (Depth == MaxDepth) {
+    template <std::size_t Depth = HeadDepth, typename U>
+    void construct_tail_impl(U&& other) {
+        if constexpr (Depth >= MaxDepth) {
             return;
         } else {
             constexpr auto NextDepth = Depth + 1;
             try {
-                init<NextDepth>(std::move(other.get<NextDepth>()));
+                get<NextDepth>().init_value(std::forward<U>(other).template subtuple<NextDepth>());
             } catch (...) {
-                destroy_tail<HeadDepth, NextDepth>();
+                destroy_tail_after<HeadDepth, NextDepth - 1>();
                 throw;
             }
-            other.destroy<NextDepth>();
-            return move_tail_impl<NextDepth>(std::move(other));
+            return construct_tail_impl<NextDepth>(std::forward<U>(other));
         }
     }
 
@@ -352,26 +460,26 @@ private: // Swap tail subtuples
         if constexpr (Depth == MaxDepth) {
             return true;
         } else {
-            return (std::is_nothrow_swappable_v<Tail> && ...);
+            return IsNothrowSwappable<Tail...>;
         }
     }
 
     template <std::size_t Depth = HeadDepth>
-    static constexpr void swap_tail(IterStorage& lhs, IterStorage& rhs) noexcept(
+    static constexpr void swap_tail_after(IterStorage& lhs, IterStorage& rhs) noexcept(
             is_swap_tail_noexcept<Depth>()) {
         if constexpr (Depth == MaxDepth) {
             return;
         } else {
             constexpr auto NextDepth = Depth + 1;
-
-            using std::swap;
-            swap(lhs.get<NextDepth>(), rhs.get<NextDepth>());
-
-            return swap_tail<NextDepth>(lhs, rhs);
+            {
+                using std::swap;
+                swap(lhs.subtuple<NextDepth>(), rhs.subtuple<NextDepth>());
+            }
+            return swap_tail_after<NextDepth>(lhs, rhs);
         }
     }
 
-private: // 
+private: // TODO: name the section
 
     // TODO: impl
 };
