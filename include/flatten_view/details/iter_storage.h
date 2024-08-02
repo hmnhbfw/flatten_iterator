@@ -64,8 +64,9 @@ public: // Constructor/Destructor
     #if defined(NDEBUG)
         if (tag_ == Tag::VALUE) {
             throw BadValueError(
-                "Destroying `NonOwningMaybe` is not allowed until its defined "
-                "value is manually destroyed.");
+                    "Destroying `NonOwningMaybe` is not allowed until its defined "
+                    "value is manually destroyed. "
+                    "Hint: use `destroy_existed_value` first.");
         }
     #endif
     }
@@ -87,7 +88,9 @@ public: // Value access
     constexpr const T& value() const noexcept(is_noexcept<>) {
     #if defined(NDEBUG)
         if (tag_ == Tag::NOTHING) {
-            throw BadValueError("Access to an undefined value.");
+            throw BadValueError(
+                    "Access to an undefined value. "
+                    "Hint: initialize the value first via `init_value`.");
         }
     #endif
         return value_;
@@ -101,8 +104,8 @@ public: // Value management
     #if defined(NDEBUG)
         if (tag_ == Tag::VALUE) {
             throw BadValueError(
-                "Initialization of a defined value. "
-                "Hint: use `mutate_existed_value` instead.");
+                    "Initialization of a defined value. "
+                    "Hint: use `mutate_existed_value` instead.");
         }
     #endif
         (void) new(&value_) T(std::forward<Args>(args)...);
@@ -117,7 +120,8 @@ public: // Value management
     #if defined(NDEBUG)
         if (tag_ == Tag::NOTHING) {
             throw BadValueError(
-                "Access to an undefined value. Hint: use `init_value` instead.");
+                    "Access to an undefined value. "
+                    "Hint: use `init_value` instead.");
         }
     #endif
         value_ = std::forward<U>(other);
@@ -128,8 +132,8 @@ public: // Value management
     #if defined(NDEBUG)
         if (tag_ == Tag::NOTHING) {
             throw BadValueError(
-                "Destroying of a defined value. "
-                "Hint: initialize the value first via `init_value`.");
+                    "Destroying of a defined value. "
+                    "Hint: initialize the value first via `init_value`.");
         }
     #endif
         value_.~T();
@@ -187,6 +191,10 @@ private: // Location in the storage
         return depth <= MaxDepth;
     }
 
+    static constexpr bool is_single_subtuple() noexcept {
+        return HeadDepth == MaxDepth;
+    }
+
 private: // `Tuple` must be pairs of an iterator and its sentinel
 
     static_assert(((std::tuple_size_v<Tail> == 2) && ...),
@@ -227,11 +235,15 @@ public: // Constructor/Destructor/Assignment operators
     constexpr IterStorage(Iterator first, Sentinel last) noexcept(
             noexcept( std::make_tuple(std::move(first), std::move(last)) ))
             : storage_(std::make_tuple(std::move(first), std::move(last)),
-                       NonOwningMaybe<Tail>()...) {}
+                       NonOwningMaybe<Tail>()...) {
+        forward_to_nearest_leaf();
+    }
 
     ~IterStorage() noexcept(IsNothrowDestructible<Head, Tail...>) {
-        if (is_tail_initialized()) {
-            destroy_tail_after();
+        if constexpr (!is_single_subtuple()) {
+            if (non_empty()) {
+                destroy_tail_after();
+            }
         }
     }
 
@@ -240,8 +252,10 @@ public: // Constructor/Destructor/Assignment operators
     constexpr IterStorage(const IterStorage& other) noexcept(
             IsNothrowCopyConstructible<Head, Tail...>)
             : storage_(other.subtuple<HeadDepth>(), NonOwningMaybe<Tail>()...) {
-        if (is_tail_initialized()) {
-            construct_tail_after(other);
+        if constexpr (!is_single_subtuple()) {
+            if (non_empty()) {
+                construct_tail_after(other);
+            }
         }
     }
 
@@ -261,8 +275,10 @@ public: // Constructor/Destructor/Assignment operators
     constexpr IterStorage(IterStorage&& other) noexcept(
             IsNothrowMoveConstructible<Head, Tail...>)
             : storage_(std::move(other.subtuple<HeadDepth>()), NonOwningMaybe<Tail>()...) {
-        if (is_tail_initialized()) {
-            construct_tail_after(std::move(other));
+        if constexpr (!is_single_subtuple()) {
+            if (non_empty()) {
+                construct_tail_after(std::move(other));
+            }
         }
     }
 
@@ -284,25 +300,25 @@ public: // Swap
     friend constexpr void swap(IterStorage& lhs, IterStorage& rhs) noexcept(
             IsNothrowSwappable<Head, Tail...>
             && IsNothrowMoveConstructible<Tail...>) {
-        const bool is_lhs_tail_init = lhs.is_tail_initialized();
-        const bool is_rhs_tail_init = rhs.is_tail_initialized();
-        if (is_lhs_tail_init && is_rhs_tail_init) {
-            swap_tail_after(lhs, rhs);
-        } else if (is_lhs_tail_init) {
-            rhs.construct_tail_after(std::move(lhs));
-        } else if (is_rhs_tail_init) {
-            lhs.construct_tail_after(std::move(rhs));
+        if constexpr (!is_single_subtuple()) {
+            const bool is_lhs_tail_init = lhs.non_empty();
+            const bool is_rhs_tail_init = rhs.non_empty();
+            if (is_lhs_tail_init && is_rhs_tail_init) {
+                swap_tail_after(lhs, rhs);
+            } else if (is_lhs_tail_init) {
+                rhs.construct_tail_after(std::move(lhs));
+            } else if (is_rhs_tail_init) {
+                lhs.construct_tail_after(std::move(rhs));
+            }
         }
-        {
-            using std::swap;
-            swap(lhs.subtuple<HeadDepth>(), rhs.subtuple<HeadDepth>());
-        }
+        using std::swap;
+        swap(lhs.subtuple<HeadDepth>(), rhs.subtuple<HeadDepth>());
     }
 
 public: // Capacity
 
     constexpr std::size_t size() const noexcept {
-        return MaxDepth;
+        return MaxDepth + 1;
     }
 
 private: // Subtuple access
@@ -317,7 +333,7 @@ private: // Subtuple access
     constexpr auto& get() noexcept {
         using Ref = MutRef<decltype( const_this_ref().template get<Depth>() )>;
         return const_cast<Ref>(
-                static_cast<const IterStorage&>(*this).subtuple<get>());
+                static_cast<const IterStorage&>(*this).get<Depth>());
     }
 
     template <std::size_t Depth>
@@ -350,6 +366,8 @@ private: // Subtuple access
         }
     }
 
+public: // Iterator/Sentinel access
+
     template <std::size_t Depth>
     constexpr auto& current() noexcept {
         using Ref = MutRef<decltype( const_this_ref().template current<Depth>() )>;
@@ -376,7 +394,7 @@ private: // Subtuple access
 
 private: // Tail subtuple initializing
 
-    constexpr bool is_tail_initialized() const noexcept {
+    constexpr bool non_empty() const noexcept {
         return current<HeadDepth>() != sentinel<HeadDepth>();
     }
 
@@ -388,7 +406,7 @@ private: // Deleters
     template <std::size_t Depth>
     constexpr void destroy() noexcept(IsNothrowDestructible<Subtuple<Depth>>) {
         static_assert(is_in_range(Depth) && Depth != HeadDepth);
-        assert(is_tail_initialized());
+        assert(non_empty());
 
         get<Depth>().destroy_existed_value();
     }
@@ -457,7 +475,7 @@ private: // Swap tail subtuples
 
     template <std::size_t Depth>
     static constexpr bool is_swap_tail_noexcept() noexcept {
-        if constexpr (Depth == MaxDepth) {
+        if constexpr (Depth >= MaxDepth) {
             return true;
         } else {
             return IsNothrowSwappable<Tail...>;
@@ -467,7 +485,7 @@ private: // Swap tail subtuples
     template <std::size_t Depth = HeadDepth>
     static constexpr void swap_tail_after(IterStorage& lhs, IterStorage& rhs) noexcept(
             is_swap_tail_noexcept<Depth>()) {
-        if constexpr (Depth == MaxDepth) {
+        if constexpr (Depth >= MaxDepth) {
             return;
         } else {
             constexpr auto NextDepth = Depth + 1;
@@ -481,7 +499,143 @@ private: // Swap tail subtuples
 
 private: // TODO: name the section
 
-    // TODO: impl
+    /// Look at \c MaxDepth subtuple for the nearest pair such that
+    /// the iterator is not equal to its sentinel, otherwise, in \c HeadDepth
+    /// subtuple the iterator is equal to its sentinel, e.i. the current
+    /// storage models a sentinel.
+    template <std::size_t Depth = HeadDepth>
+    constexpr void forward_to_nearest_leaf() { // TODO: noexcept
+        static_assert(is_in_range(Depth));
+
+        if constexpr (is_single_subtuple()) {
+            return;
+        } else {
+            for (; current<Depth>() != sentinel<Depth>(); ++current<Depth>()) {
+                auto&& range = *current<Depth>();
+                auto first = BeginFn(range);
+                auto last = EndFn(range);
+                if (first != last) {
+                    get<Depth + 1>().init_value(std::make_tuple(std::move(first), std::move(last)));
+                    if constexpr (Depth + 1 == MaxDepth) {
+                        return;
+                    } else {
+                        return forward_to_nearest_leaf<Depth + 1>();
+                    }
+                }
+            }
+            if constexpr (Depth == HeadDepth) {
+                return;
+            } else {
+                destroy<Depth>();
+                ++current<Depth - 1>();
+                return forward_to_nearest_leaf<Depth - 1>();
+            }
+        }
+    }
+
+    template <std::size_t Depth = MaxDepth>
+    constexpr void next() { // TODO: noexcept
+        static_assert(is_in_range(Depth));
+        assert(non_empty());
+
+        if constexpr (is_single_subtuple()) {
+            ++current<HeadDepth>();
+            return;
+        } else {
+            if (++current<Depth>() == sentinel<Depth>()) {
+                if constexpr (Depth == HeadDepth) {
+                    destroy_tail_after();
+                    return;
+                } else {
+                    return next<Depth - 1>();
+                }
+            } else {
+                if constexpr (Depth == MaxDepth) {
+                    return;
+                } else {
+                    return next_down<Depth>();
+                }
+            }
+        }
+    }
+
+    template <std::size_t Depth>
+    constexpr void next_down() { // TODO: noexcept
+        static_assert(Depth != HeadDepth && is_in_range(Depth));
+        assert(non_empty());
+
+        for (; current<Depth>() != sentinel<Depth>(); ++current<Depth>()) {
+            auto&& range = *current<Depth>();
+            auto first = BeginFn(range);
+            auto last = EndFn(range);
+            if (first != last) {
+                get<Depth + 1>().mutate_existed_value(
+                        std::make_tuple(std::move(first), std::move(last)));
+                if constexpr (Depth + 1 == MaxDepth) {
+                    return;
+                } else {
+                    return next_down<Depth + 1>();
+                }
+            }
+        }
+        if constexpr (Depth == HeadDepth) {
+            return;
+        } else {
+            ++current<Depth - 1>();
+            return next_down<Depth - 1>();
+        }
+    }
+
+    template <std::size_t Depth = MaxDepth>
+    constexpr auto prev() { // TODO: noexcept
+        // TODO: impl
+    }
+
+public: // Basic iterator operators
+
+    constexpr auto operator*() noexcept(
+            noexcept( *current<MaxDepth>() ))
+            -> decltype( *current<MaxDepth>() ) {
+        assert(non_empty());
+        return *current<MaxDepth>();
+    }
+
+    constexpr auto operator++() noexcept(
+            noexcept( next() ))
+            -> decltype( *(*this) ) {
+        assert(non_empty());
+        next();
+        return *(*this);
+    }
+
+    constexpr auto operator--() noexcept(
+            noexcept( next() ))
+            -> decltype( *(*this) ) {
+        assert(non_empty());
+        prev();
+        return *(*this);
+    }
+
+    friend constexpr bool operator==(const IterStorage& lhs, const IterStorage& rhs) noexcept(
+            noexcept( lhs.subtuple<HeadDepth>() == rhs.subtuple<HeadDepth>() )) {
+        bool result = lhs.subtuple<HeadDepth>() == rhs.subtuple<HeadDepth>();
+    #if defined(NDEBUG)
+        if constexpr (!is_single_subtuple()) {
+            assert(lhs.non_empty() == rhs.non_empty());
+            if (lhs.non_empty()) {
+                for (std::size_t depth = HeadDepth + 1; depth <= MaxDepth; ++depth) {
+                    result &= (lhs.subtuple<depth>() == rhs.subtuple<depth>());
+                }
+            }
+        }
+    #endif
+        return result;
+    }
+
+    friend constexpr bool operator!=(const IterStorage& lhs, const IterStorage& rhs) noexcept(
+            noexcept( !(lhs == rhs) )) {
+        return !(lhs == rhs);
+    }
 };
 
 } // namespace flatten::details
