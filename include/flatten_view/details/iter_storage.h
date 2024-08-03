@@ -78,6 +78,33 @@ public: // An object of this class is not allowed to manage its resources by its
     NonOwningMaybe(NonOwningMaybe&&) = delete;
     NonOwningMaybe& operator=(NonOwningMaybe&&) = delete;
 
+public: // Equality
+
+    friend constexpr bool operator==(const NonOwningMaybe& lhs, const NonOwningMaybe& rhs) noexcept(
+            is_noexcept<noexcept( lhs.value_ == rhs.value_ )>) {
+    #if defined(NDEBUG)
+        if (lhs.tag_ == Tag::NOTHING && rhs.tag_ == Tag::NOTHING) {
+            throw BadValueError(
+                    "Both operands are not defined. "
+                    "Hint: initialize their values first via `init_value`.");
+        } else if (lhs.tag_ == Tag::NOTHING) {
+            throw BadValueError(
+                    "Left operand is not defined. "
+                    "Hint: initialize its value first via `init_value`.");
+        } else if (rhs.tag_ == Tag::NOTHING) {
+            throw BadValueError(
+                    "Right operand is not defined. "
+                    "Hint: initialize its value first via `init_value`.");
+        }
+    #endif
+        return lhs.value_ == rhs.value_;
+    }
+
+    friend constexpr bool operator!=(const NonOwningMaybe& lhs, const NonOwningMaybe& rhs) noexcept(
+            is_noexcept<noexcept( !(lhs == rhs) )>) {
+        return !(lhs == rhs);
+    }
+
 public: // Value access
 
     constexpr T& value() noexcept(is_noexcept<>) {
@@ -618,18 +645,20 @@ public: // Basic iterator operators
 
     friend constexpr bool operator==(const IterStorage& lhs, const IterStorage& rhs) noexcept(
             noexcept( lhs.subtuple<HeadDepth>() == rhs.subtuple<HeadDepth>() )) {
-        bool result = lhs.subtuple<HeadDepth>() == rhs.subtuple<HeadDepth>();
-    #if defined(NDEBUG)
         if constexpr (!is_single_subtuple()) {
-            assert(lhs.non_empty() == rhs.non_empty());
-            if (lhs.non_empty()) {
-                for (std::size_t depth = HeadDepth + 1; depth <= MaxDepth; ++depth) {
-                    result &= (lhs.subtuple<depth>() == rhs.subtuple<depth>());
-                }
+            return lhs.subtuple<HeadDepth>() == rhs.subtuple<HeadDepth>();
+        } else {
+            const bool is_lhs_tail_init = lhs.non_empty();
+            const bool is_rhs_tail_init = rhs.non_empty();
+            if (is_lhs_tail_init != is_rhs_tail_init) {
+                return false;
+            }
+            if (is_lhs_tail_init) {
+                return lhs.storage_ == rhs.storage_;
+            } else {
+                return lhs.subtuple<HeadDepth>() == rhs.subtuple<HeadDepth>();
             }
         }
-    #endif
-        return result;
     }
 
     friend constexpr bool operator!=(const IterStorage& lhs, const IterStorage& rhs) noexcept(
