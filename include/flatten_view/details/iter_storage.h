@@ -279,6 +279,22 @@ private: // Location in the storage
     static constexpr std::size_t HeadDepth = 0;
     static constexpr std::size_t MaxDepth = std::tuple_size_v<decltype( storage_ )> - 1;
 
+    static constexpr std::size_t up(std::size_t depth) noexcept {
+        return depth - 1;
+    }
+
+    static constexpr std::size_t down(std::size_t depth) noexcept {
+        return depth + 1;
+    }
+
+    static constexpr bool is_head(std::size_t depth) noexcept {
+        return depth == HeadDepth;
+    }
+
+    static constexpr bool is_max(std::size_t depth) noexcept {
+        return depth == MaxDepth;
+    }
+
     static constexpr bool is_in_range(std::size_t depth) noexcept {
         return depth <= MaxDepth;
     }
@@ -325,12 +341,75 @@ private: // Noexcept checks
         }
     }
 
+    template <std::size_t Depth>
+    constexpr bool is_nothrow_constructible_from_begin() noexcept {
+        static_assert(!is_head(Depth) && is_in_range(Depth));
+        using I = decltype( BeginFn(*current<up(Depth)>()) );
+        return std::is_nothrow_move_constructible_v<I>
+                && noexcept( BeginFn(*current<up(Depth)>()) );
+    }
+
+    template <std::size_t Depth>
+    constexpr bool is_nothrow_constructible_from_end() noexcept {
+        static_assert(!is_head(Depth) && is_in_range(Depth));
+        using S = decltype( EndFn(*current<up(Depth)>()) );
+        return std::is_nothrow_move_constructible_v<S>
+                && noexcept( EndFn(*current<up(Depth)>()) );
+    }
+
+    template <std::size_t Depth>
+    constexpr bool is_nothrow_assignable_from_begin() noexcept {
+        static_assert(!is_head(Depth) && is_in_range(Depth));
+        using I = decltype( BeginFn(*current<up(Depth)>()) );
+        return std::is_nothrow_move_assignable_v<I>
+                && noexcept( BeginFn(*current<up(Depth)>()) );
+    }
+
+    template <std::size_t Depth>
+    constexpr bool is_nothrow_assignable_from_end() noexcept {
+        static_assert(!is_head(Depth) && is_in_range(Depth));
+        using S = decltype( EndFn(*current<up(Depth)>()) );
+        return std::is_nothrow_move_assignable_v<S>
+                && noexcept( EndFn(*current<up(Depth)>()) );
+    }
+
+    template <std::size_t Depth>
+    constexpr bool is_nothrow_dereference() noexcept {
+        static_assert(is_in_range(Depth));
+        return noexcept( *current<Depth>() );
+    }
+
+    template <std::size_t Depth>
+    constexpr bool is_nothrow_increment() noexcept {
+        static_assert(is_in_range(Depth));
+        return noexcept( ++current<Depth>() );
+    }
+
+    template <std::size_t Depth>
+    constexpr bool is_nothrow_decrement() noexcept {
+        static_assert(is_in_range(Depth));
+        return noexcept( --current<Depth>() );
+    }
+
+    template <std::size_t Depth>
+    constexpr bool is_nothrow_equal() noexcept {
+        static_assert(is_in_range(Depth));
+        return noexcept( current<Depth>() == sentinel<Depth>() );
+    }
+
+    template <std::size_t Depth>
+    constexpr bool is_nothrow_not_equal() noexcept {
+        static_assert(is_in_range(Depth));
+        return noexcept( current<Depth>() != sentinel<Depth>() );
+    }
+
 public: // Constructor/Destructor/Assignment operators
 
     /// \par Exception Safety:
     /// Strong exception guarantee.
     constexpr IterStorage(Iterator first, Sentinel last) noexcept(
-            noexcept( std::make_tuple(std::move(first), std::move(last)) ))
+            noexcept( std::make_tuple(std::move(first), std::move(last)) )
+            && noexcept( construct_down_to_leftmost_leaf() ))
             : storage_(std::make_tuple(std::move(first), std::move(last)),
                        NonOwningMaybe<Tail>()...) {
         construct_down_to_leftmost_leaf();
@@ -425,9 +504,6 @@ private: // Subtuple access
     template <typename T>
     using MutRef = std::remove_const_t<std::remove_reference_t<T>>&;
 
-    template <typename T>
-    using MutRvalueRef = std::remove_const_t<std::remove_reference_t<T>>&&;
-
     template <std::size_t Depth>
     constexpr auto& get() noexcept {
         using Ref = MutRef<decltype( const_this_ref().template get<Depth>() )>;
@@ -451,14 +527,13 @@ private: // Subtuple access
     template <std::size_t Depth>
     constexpr auto&& subtuple() && noexcept {
         using Ref = MutRef<decltype( const_this_ref().template subtuple<Depth>() )>;
-        using RvalueRef = MutRvalueRef<Ref>;
         return std::move(const_cast<Ref>(
                 static_cast<const IterStorage&>(*this).subtuple<Depth>()));
     }
 
     template <std::size_t Depth>
     constexpr const auto& subtuple() const & noexcept {
-        if constexpr (Depth == HeadDepth) {
+        if constexpr (is_head(Depth)) {
             return get<HeadDepth>();
         } else {
             return get<Depth>().value();
@@ -496,7 +571,7 @@ private: // Tail subtuple initializing
     template <std::size_t Depth = HeadDepth>
     constexpr bool empty() const noexcept {
         static_assert(is_in_range(Depth));
-        assert(Depth == HeadDepth || !empty());
+        assert(is_head(Depth) || !empty());
         return current<Depth>() == sentinel<Depth>();
     }
 
@@ -507,7 +582,7 @@ private: // Deleters
 
     template <std::size_t Depth>
     constexpr void destroy() noexcept(IsNothrowDestructible<Subtuple<Depth>>) {
-        static_assert(is_in_range(Depth) && Depth != HeadDepth);
+        static_assert(is_in_range(Depth) && !is_head(Depth));
         assert(!empty());
 
         get<Depth>().destroy_existed_value();
@@ -515,19 +590,16 @@ private: // Deleters
 
     template <std::size_t Depth = HeadDepth, std::size_t LastDepth = MaxDepth>
     constexpr void destroy_tail_after() noexcept(IsNothrowDestructible<Tail...>) {
-        if constexpr (Depth >= LastDepth) {
-            return;
-        } else {
-            constexpr auto NextDepth = Depth + 1;
-            destroy<NextDepth>();
-            return destroy_tail_after<NextDepth>();
+        if constexpr (Depth < LastDepth) {
+            destroy<down(Depth)>();
+            return destroy_tail_after<down(Depth)>();
         }
     }
 
 private: // Tail subtuple copy/move
 
     template <typename U>
-    static constexpr bool is_construct_tail_noexcept() noexcept {
+    static constexpr bool is_nothrow_construct_tail() noexcept {
         if constexpr (std::is_lvalue_reference_v<U&&>) {
             return IsNothrowCopyConstructible<Tail...>;
         } else {
@@ -537,9 +609,9 @@ private: // Tail subtuple copy/move
 
     template <typename U>
     constexpr void construct_tail_after(U&& other) noexcept(
-            is_construct_tail_noexcept<U&&>) {
+            is_nothrow_construct_tail<U&&>) {
         static_assert(std::is_same_v<std::decay_t<U>, IterStorage>);
-        if constexpr (is_construct_tail_noexcept<U&&>) {
+        if constexpr (is_nothrow_construct_tail<U&&>) {
             return nothrow_construct_tail_impl(std::forward<U>(other));
         } else {
             return construct_tail_impl(std::forward<U>(other));
@@ -548,36 +620,38 @@ private: // Tail subtuple copy/move
 
     template <std::size_t Depth = HeadDepth, typename U>
     constexpr void nothrow_construct_tail_impl(U&& other) noexcept {
-        if constexpr (Depth >= MaxDepth) {
-            return;
-        } else {
-            constexpr auto NextDepth = Depth + 1;
-            get<NextDepth>().init_value(std::forward<U>(other).template subtuple<NextDepth>());
-            return nothrow_construct_tail_impl<NextDepth>(std::forward<U>(other));
+        static_assert(is_in_range(Depth));
+
+        if constexpr (!is_max(Depth)) {
+            get<down(Depth)>().init_value(
+                    std::forward<U>(other).template subtuple<down(Depth)>());
+            return nothrow_construct_tail_impl<down(Depth)>(std::forward<U>(other));
         }
     }
 
     template <std::size_t Depth = HeadDepth, typename U>
     void construct_tail_impl(U&& other) {
-        if constexpr (Depth >= MaxDepth) {
-            return;
-        } else {
-            constexpr auto NextDepth = Depth + 1;
+        static_assert(is_in_range(Depth));
+
+        if constexpr (!is_max(Depth)) {
             try {
-                get<NextDepth>().init_value(std::forward<U>(other).template subtuple<NextDepth>());
+                get<down(Depth)>().init_value(
+                        std::forward<U>(other).template subtuple<down(Depth)>());
             } catch (...) {
-                destroy_tail_after<HeadDepth, NextDepth - 1>();
+                destroy_tail_after<HeadDepth, Depth>();
                 throw;
             }
-            return construct_tail_impl<NextDepth>(std::forward<U>(other));
+            return construct_tail_impl<down(Depth)>(std::forward<U>(other));
         }
     }
 
 private: // Swap tail subtuples
 
     template <std::size_t Depth>
-    static constexpr bool is_swap_tail_noexcept() noexcept {
-        if constexpr (Depth >= MaxDepth) {
+    static constexpr bool is_nothrow_swap_tail() noexcept {
+        static_assert(is_in_range(Depth));
+
+        if constexpr (is_max(Depth)) {
             return true;
         } else {
             return IsNothrowSwappable<Tail...>;
@@ -586,94 +660,63 @@ private: // Swap tail subtuples
 
     template <std::size_t Depth = HeadDepth>
     static constexpr void swap_tail_after(IterStorage& lhs, IterStorage& rhs) noexcept(
-            is_swap_tail_noexcept<Depth>()) {
-        if constexpr (Depth >= MaxDepth) {
-            return;
-        } else {
-            constexpr auto NextDepth = Depth + 1;
+            is_nothrow_swap_tail<Depth>()) {
+        static_assert(is_in_range(Depth));
+
+        if constexpr (!is_max(Depth)) {
             {
                 using std::swap;
-                swap(lhs.subtuple<NextDepth>(), rhs.subtuple<NextDepth>());
+                swap(lhs.subtuple<down(Depth)>(), rhs.subtuple<down(Depth)>());
             }
-            return swap_tail_after<NextDepth>(lhs, rhs);
+            return swap_tail_after<down(Depth)>(lhs, rhs);
         }
     }
 
 private: // Back and forward traversing
 
+    template <std::size_t Depth = HeadDepth>
+    constexpr bool is_nothrow_construct_down_to_leftmost_leaf(bool acc = true) noexcept {
+        static_assert(is_in_range(Depth));
+
+        if constexpr (size() == 1 || is_max(Depth)) {
+            return acc;
+        } else {
+            return is_nothrow_construct_down_to_leftmost_leaf<down(Depth)>(
+                    acc
+                    && is_nothrow_equal<Depth>() && is_nothrow_not_equal<Depth>()
+                    && is_nothrow_increment<Depth>()
+                    && is_nothrow_dereference<Depth>()
+                    && is_nothrow_constructible_from_begin<down(Depth)>()
+                    && is_nothrow_constructible_from_end<down(Depth)>()
+                    && is_nothrow_not_equal<down(Depth)>()
+                    && (is_head(Depth) || noexcept( destroy<Depth>() )));
+        }
+    }
+
     /// Construct a path from the current node at \c Depth depth to the nearest
     /// leaf, such that the path doesn't have the previous state.
     template <std::size_t Depth = HeadDepth>
-    constexpr void construct_down_to_leftmost_leaf() { // TODO: noexcept
-        static_assert(Depth < MaxDepth && is_in_range(Depth));
+    constexpr void construct_down_to_leftmost_leaf() noexcept(
+            is_nothrow_construct_down_to_leftmost_leaf()) {
+        static_assert(is_in_range(Depth));
 
-        if constexpr (size() == 1) {
-            return;
-        } else {
+        if constexpr (size() > 1 && !is_max(Depth)) {
             for (; !empty<Depth>(); ++current<Depth>()) {
                 auto&& range = *current<Depth>();
                 auto first = BeginFn(range);
                 auto last = EndFn(range);
-                if (first != last) {
-                    get<Depth + 1>().init_value(
-                            std::make_tuple(std::move(first), std::move(last)));
-                    if constexpr (Depth + 1 == MaxDepth) {
-                        return;
-                    } else {
-                        return construct_down_to_leftmost_leaf<Depth + 1>();
-                    }
+                if (first == last) {
+                    continue;
                 }
+                get<down(Depth)>().init_value(
+                        std::make_tuple(std::move(first), std::move(last)));
+                return construct_down_to_leftmost_leaf<down(Depth)>();
             }
-            if constexpr (Depth == HeadDepth) {
-                return;
-            } else {
+            if constexpr (!is_head(Depth)) {
                 destroy<Depth>();
-                ++current<Depth - 1>();
-                return construct_down_to_leftmost_leaf<Depth - 1>();
+                ++current<up(Depth)>();
+                return construct_down_to_leftmost_leaf<up(Depth)>();
             }
-        }
-    }
-
-    template <std::size_t Depth = HeadDepth>
-    constexpr void construct_down_to_rightmost_leaf() { // TODO: noexcept
-        static_assert(size() > 1 && Depth < MaxDepth && is_in_range(Depth));
-
-        // TODO: refactor
-        if constexpr (Depth == HeadDepth) {
-            for (;; --current<Depth>()) {
-                auto&& range = *current<Depth>();
-                auto first = BeginFn(range);
-                auto last = EndFn(range);
-                if (first != last) {
-                    first = last;
-                    subtuple<Depth + 1>().init_value(
-                            std::make_tuple(std::move(--first), std::move(last)));
-                    if constexpr (Depth + 1 == MaxDepth) {
-                        return;
-                    } else {
-                        return construct_down_to_rightmost_leaf<Depth + 1>();
-                    }
-                }
-            }
-        } else {
-            const auto begin = BeginFn(*current<Depth - 1>());
-            for (; current<Depth>() != begin; --current<Depth>()) {
-                auto&& range = *current<Depth>();
-                auto first = BeginFn(range);
-                auto last = EndFn(range);
-                if (first != last) {
-                    first = last;
-                    subtuple<Depth + 1>().init_value(
-                            std::make_tuple(std::move(--first), std::move(last)));
-                    if constexpr (Depth + 1 == MaxDepth) {
-                        return;
-                    } else {
-                        return construct_down_to_rightmost_leaf<Depth + 1>();
-                    }
-                }
-            }
-            destroy<Depth>();
-            construct_down_to_rightmost_leaf<Depth - 1>();
         }
     }
 
@@ -687,53 +730,53 @@ private: // Back and forward traversing
             return ++current<HeadDepth>();
         } else {
             if (++current<MaxDepth>() == sentinel<MaxDepth>()) {
-                return next_up<MaxDepth - 1>();
+                return next_up_to<up(MaxDepth)>();
             }
         }
     }
 
     template <std::size_t Depth>
-    constexpr void next_up() { // TODO: noexcept
-        static_assert(Depth < MaxDepth && is_in_range(Depth));
-        assert(!empty() && size() > 0);
+    constexpr void next_up_to() { // TODO: noexcept
+        static_assert(!is_max(Depth) && is_in_range(Depth));
+        assert(!empty() && size() > 1);
 
         if (++current<Depth>() == sentinel<Depth>()) {
-            if constexpr (Depth == HeadDepth) {
+            if constexpr (is_head(Depth)) {
                 return destroy_tail_after();
             } else {
-                return next_up<Depth - 1>();
+                return next_up_to<up(Depth)>();
             }
         }
-        return next_down<Depth>();
+        return next_down_from<Depth>();
     }
 
     template <std::size_t Depth>
-    constexpr void next_down() { // TODO: noexcept
-        static_assert(Depth > HeadDepth && is_in_range(Depth));
-        assert(!empty() && size() > 0);
+    constexpr void next_down_from() { // TODO: noexcept
+        static_assert(!is_head(Depth) && is_in_range(Depth));
+        assert(!empty() && size() > 1);
 
-        for (; !empty<Depth>(); ++current<Depth>()) {
-            auto&& range = *current<Depth>();
-            auto first = BeginFn(range);
-            auto last = EndFn(range);
-            if (first != last) {
-                get<Depth + 1>().mutate_existed_value(
-                        std::make_tuple(std::move(first), std::move(last)));
-                if constexpr (Depth + 1 == MaxDepth) {
-                    return;
-                } else {
-                    return next_down<Depth + 1>();
+        if constexpr (!is_max(Depth)) {
+            for (; !empty<Depth>(); ++current<Depth>()) {
+                auto&& range = *current<Depth>();
+                auto first = BeginFn(range);
+                auto last = EndFn(range);
+                if (first == last) {
+                    continue;
                 }
+                get<down(Depth)>().mutate_existed_value(
+                        std::make_tuple(std::move(first), std::move(last)));
+                return next_down_from<down(Depth)>();
             }
+            return next_up_to<up(Depth)>();
         }
-        return next_up<Depth - 1>();
     }
 
     template <std::size_t Depth>
-    constexpr bool can_decrement() { // TODO: noexcept
+    constexpr bool can_decrement() noexcept(
+            noexcept( current<Depth>() != BeginFn(*current<up(Depth)>()) )) {
         static_assert(Depth > HeadDepth && is_in_range(Depth));
         assert(!empty());
-        return current<Depth>() != BeginFn(*current<Depth - 1>());
+        return current<Depth>() != BeginFn(*current<up(Depth)>());
     }
 
     /// Construct a path, such that it is the previous state for the current one.
@@ -744,54 +787,104 @@ private: // Back and forward traversing
             return --current<HeadDepth>();
         } else {
             if (empty()) {
-                --current<HeadDepth>();
                 return construct_down_to_rightmost_leaf();
             } else if (can_decrement<MaxDepth>()) {
                 return --current<MaxDepth>();
             }
-            return prev_up<MaxDepth - 1>();
+            return prev_up_to<up(MaxDepth)>();
         }
     }
 
-    template <std::size_t Depth>
-    constexpr void prev_up() { // TODO: noexcept
-        static_assert(Depth < MaxDepth && is_in_range(Depth));
-        assert(!empty() && size() > 0);
+    template <std::size_t Depth = HeadDepth>
+    constexpr void construct_down_to_rightmost_leaf() { // TODO: noexcept
+        static_assert(size() > 1 && is_in_range(Depth));
 
-        if constexpr (Depth == HeadDepth) {
-            --current<HeadDepth>();
-            return prev_down<HeadDepth>();
+        if constexpr (is_max(Depth)) {
+            return --current<MaxDepth>();
+        } else if constexpr (is_head(Depth)) {
+            auto predicate = []() noexcept { return true; };
+            return init_backforward_to_last_non_empty_range_until<Depth>(std::move(predicate));
         } else {
-            if (can_decrement<Depth>()) {
-                --current<Depth>();
-                return prev_down<Depth>();
-            }
-            return prev_up<Depth - 1>();
+            auto predicate = [this, begin = BeginFn(*current<up(Depth)>())]() noexcept(
+                    is_nothrow_constructible_from_begin<Depth>()
+                    && noexcept( current<Depth>() != begin )) {
+                return current<Depth>() != begin;
+            };
+            init_backforward_to_last_non_empty_range_until<Depth>(std::move(predicate));
+            destroy<Depth>();
+            return construct_down_to_rightmost_leaf<up(Depth)>();
         }
     }
 
-    template <std::size_t Depth>
-    constexpr void prev_down() { // TODO: noexcept
-        static_assert(Depth > HeadDepth && is_in_range(Depth));
-        assert(!empty() && size() > 0);
-
-        auto up_it = BeginFn(*current<Depth - 1>());
-        for (; current<Depth>() != up_it; --current<Depth>()) {
-            auto&& range = *current<Depth>();
+    template <std::size_t Depth, typename Predicate>
+    constexpr void init_backforward_to_last_non_empty_range_until(Predicate&& predicate) { // TODO: noexcept
+        static_assert(size() > 1 && is_in_range(Depth));
+        do {
+            auto&& range = *--current<Depth>();
             auto first = BeginFn(range);
             auto last = EndFn(range);
-            if (first != last) {
-                first = last;
-                subtuple<Depth + 1>().mutate_existed_value(
-                        std::make_tuple(std::move(--first), std::move(last)));
-                if constexpr (Depth == MaxDepth) {
-                    return;
-                } else {
-                    return prev_down<Depth + 1>();
-                }
+            if (first == last) {
+                continue;
             }
+            first = EndFn(range);
+            subtuple<down(Depth)>().init_value(
+                    std::make_tuple(std::move(first), std::move(last)));
+            return construct_down_to_rightmost_leaf<down(Depth)>();
+        } while (predicate());
+    }
+
+    template <std::size_t Depth>
+    constexpr void prev_up_to() { // TODO: noexcept
+        static_assert(size() > 1 && !is_max(Depth) && is_in_range(Depth));
+        assert(!empty());
+
+        if constexpr (is_head(Depth)) {
+            return prev_down_from<HeadDepth>();
+        } else {
+            if (can_decrement<Depth>()) {
+                return prev_down_from<Depth>();
+            }
+            return prev_up_to<up(Depth)>();
         }
-        return prev_up<Depth - 1>();
+    }
+
+    // TODO: revise
+    template <std::size_t Depth>
+    constexpr void prev_down_from() { // TODO: noexcept
+        static_assert(size() > 1 && is_in_range(Depth));
+        assert(!empty());
+
+        if constexpr (is_max(Depth)) {
+            return --current<MaxDepth>();
+        } else if constexpr (is_head(Depth)) {
+            auto predicate = []() noexcept { return true; };
+            return mutate_backforward_to_last_non_empty_range_until<Depth>(std::move(predicate));
+        } else {
+            auto predicate = [this, begin = BeginFn(*current<up(Depth)>())]() noexcept(
+                    is_nothrow_constructible_from_begin<Depth>()
+                    && noexcept( current<Depth>() != begin )) {
+                return current<Depth>() != begin;
+            };
+            mutate_backforward_to_last_non_empty_range_until<Depth>(std::move(predicate));
+            return prev_up_to<up(Depth)>();
+        }
+    }
+
+    template <std::size_t Depth, typename Predicate>
+    constexpr void mutate_backforward_to_last_non_empty_range_until(Predicate&& predicate) { // TODO: noexcept
+        static_assert(size() > 1 && is_in_range(Depth));
+        do {
+            auto&& range = *--current<Depth>();
+            auto first = BeginFn(range);
+            auto last = EndFn(range);
+            if (first == last) {
+                continue;
+            }
+            first = EndFn(range);
+            subtuple<down(Depth)>().mutate_existed_value(
+                    std::make_tuple(std::move(first), std::move(last)));
+            return prev_down_from<down(Depth)>();
+        } while (predicate());
     }
 
 public: // Basic iterator operators
